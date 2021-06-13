@@ -3,82 +3,141 @@
 
 #include "stdafx.h"
 #include "stdio.h"
-#include "iostream"
-#include "fstream"
 #include "string"
-#include "vector"
+#include "server_module.h"
 #include "ws2tcpip.h"
 #include "winsock2.h"
+
+#define SERVER_PORT 5000
+#define SERVER_ADDR "127.0.0.1"
+
+#pragma comment(lib, "Ws2_32.lib")
 using namespace std;
 
-string Q_DELIMITER = "#%#";
-string A_DELIMITER = "$%$";
+int main(int argc, char *argv[])
+{
+	// Inittiate WinSock
+	WSADATA wsaDATA;
+	WORD wVersion = MAKEWORD(2, 2);
+	if (WSAStartup(wVersion, &wsaDATA)) {
+		printf("Winsock 2.2 is not supported\n");
+		return 0;
+	}
 
-struct Question {
-	string question;
-	string options[4];
-	string answer;
-};
+	// Construct socket
+	SOCKET listenSocket;
+	listenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (listenSocket == INVALID_SOCKET) {
+		printf("Error %d: Cannot create server socket.", WSAGetLastError());
+		return 0;
+	}
 
-vector<Question> questions;
+	// Bind address to socket
+	sockaddr_in serverAddr;
+	serverAddr.sin_family = AF_INET;
+	serverAddr.sin_port = htons(SERVER_PORT);
+	inet_pton(AF_INET, SERVER_ADDR, &serverAddr.sin_addr);
 
-/*
-* Function to get all questions in database
-*/
-void getAllQuestions() {
-	string line;
-	ifstream file("questions.txt");
+	if (bind(listenSocket, (sockaddr *)&serverAddr, sizeof(serverAddr))) {
+		printf("Error %d: Cannot bind this address.", WSAGetLastError());
+		return 0;
+	}
 
-	while ( getline(file, line) )
-	{
-		Question question;
+	if (listen(listenSocket, 10)) {
+		printf("Error %d: Cannot place server socket in state LISTEN.", WSAGetLastError());
+		return 0;
+	}
 
-		question.question = line;
-		for (int i = 0; i < 5; i++) {
-			getline(file, line);
-			if (i != 4) {
-				question.options[i] = line;
+	printf("Server started!\n");
+
+	// Load database
+	vector<Question> questions = getAllQuestions();
+
+	SOCKET client[FD_SETSIZE], connSock;
+	fd_set readfds, initfds; //use initfds to initiate readfds at the begining of every loop step
+	sockaddr_in clientAddr;
+	ClientSession clientSessions[FD_SETSIZE];
+	
+	int nEvents, clientAddrLen = sizeof(clientAddr), clientPort, res;
+	char buff[BUFF_SIZE], clientIP[INET_ADDRSTRLEN];
+
+	for (int i = 0; i < FD_SETSIZE; i++)
+		client[i] = 0;	// 0 indicates available entry
+
+	FD_ZERO(&initfds);
+	FD_SET(listenSocket, &initfds);
+
+	// Communicate with clients
+	while (1) {
+		readfds = initfds;
+		nEvents = select(0, &readfds, 0, 0, 0);
+		if (nEvents < 0) {
+			printf("Error! Cannot poll sockets: %d\n", WSAGetLastError());
+			break;
+		}
+
+		//new client connection
+		if (FD_ISSET(listenSocket, &readfds)) {
+			if ((connSock = accept(listenSocket, (sockaddr *)&clientAddr, &clientAddrLen)) < 0) {
+				printf("Error! Cannot accept new connection: %d\n", WSAGetLastError());
+				break;
 			}
 			else {
-				question.answer = line;
+				inet_ntop(AF_INET, &clientAddr.sin_addr, clientIP, sizeof(clientIP));
+				clientPort = ntohs(clientAddr.sin_port);
+				printf("New connection from client %s:%d\n", clientIP, clientPort);
+
+				int i;
+				for (i = 0; i < FD_SETSIZE; i++)
+					if (client[i] == 0) {
+						client[i] = connSock;
+						FD_SET(client[i], &initfds);
+						ClientSession session = { connSock, clientAddr, "", false };
+						clientSessions[i] = session;
+						break;
+					}
+
+				if (i == FD_SETSIZE) {
+					printf("\nToo many clients.");
+					closesocket(connSock);
+				}
+
+				if (--nEvents == 0)
+					continue; //no more event
 			}
 		}
 
-		questions.push_back(question);
+		//receive data from clients
+		for (int i = 0; i < FD_SETSIZE; i++) {
+			if (client[i] == 0)
+				continue;
+
+			if (FD_ISSET(client[i], &readfds)) {
+				res = Receive(client[i], buff, 0, &clientSessions[i]);
+				if (res <= 0 ) {
+					FD_CLR(client[i], &initfds);
+					closesocket(client[i]);
+					client[i] = 0;
+					clientSessions[i] = {};
+				}
+				else {
+					Send(client[i], buff, 0);
+				}
+			}
+
+			if (--nEvents <= 0)
+				continue; //no more event
+		}
+
 	}
 
-	file.close();
-}
+	// Close socket
+	closesocket(listenSocket);
 
-/*
-* Function to encode questions
-* @param questions: Type vector - list questions for encode
-* @returns output string of encode list question
-*/
-string encodeQuestions(vector<Question> questions) {
-	string output;
-	int noq = questions.size();
-	for (int i = 0; i < noq; i++) {
-		output.append(questions[i].question);
-		output.append(A_DELIMITER);
-		output.append(questions[i].options[0]);
-		output.append(A_DELIMITER);
-		output.append(questions[i].options[1]);
-		output.append(A_DELIMITER);
-		output.append(questions[i].options[2]);
-		output.append(A_DELIMITER);
-		output.append(questions[i].options[3]);
-		output.append(Q_DELIMITER);
-	}
-	return output;
-}
+	// Terminate Winsock
+	WSACleanup();
 
-int main()
-{	
-	getAllQuestions();
-	string encode = encodeQuestions(questions);
-	cout << encode;
-    return 0;
-}
 
+	return 0;
+}
 
