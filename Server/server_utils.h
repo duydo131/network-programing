@@ -19,6 +19,7 @@ struct Message {
 };
 
 struct Question {
+	int id;
 	string question;
 	string options[4];
 	string answer;
@@ -93,11 +94,13 @@ void saveAccount(Account account, string accounts_path) {
 */
 vector<Question> getAllQuestions(string questions_path) {
 	vector<Question> questions;
+	int id = 1;
 	string line;
 	ifstream file(questions_path);
 	while (getline(file, line))
 	{
 		Question question;
+		question.id = id;
 		question.question = line;
 		for (int i = 0; i < 5; i++) {
 			getline(file, line);
@@ -109,6 +112,7 @@ vector<Question> getAllQuestions(string questions_path) {
 			}
 		}
 		questions.push_back(question);
+		id++;
 	}
 	file.close();
 	return questions;
@@ -123,6 +127,8 @@ string encodeQuestions(vector<Question> questions) {
 	string output;
 	int noq = questions.size();
 	for (int i = 0; i < noq; i++) {
+		output.append(to_string(questions[i].id));
+		output.append(A_DELIMITER);
 		output.append(questions[i].question);
 		output.append(A_DELIMITER);
 		output.append(questions[i].options[0]);
