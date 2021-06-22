@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 	sockaddr_in clientAddr;
 	Session sessions[FD_SETSIZE];
 	
-	int nEvents, clientAddrLen = sizeof(clientAddr), clientPort, res;
+	int nEvents, clientAddrLen = sizeof(clientAddr), clientPort, ret;
 	char buff[BUFF_SIZE], clientIP[INET_ADDRSTRLEN];
 
 	for (int i = 0; i < FD_SETSIZE; i++)
@@ -64,6 +64,8 @@ int main(int argc, char *argv[])
 
 	FD_ZERO(&initfds);
 	FD_SET(listenSocket, &initfds);
+
+	Message msgRecv, msgRes;
 
 	// Communicate with clients
 	while (1) {
@@ -111,14 +113,17 @@ int main(int argc, char *argv[])
 				continue;
 
 			if (FD_ISSET(client[i], &readfds)) {
-				res = Receive(client[i], buff, 0, &sessions[i]);
-				if (res <= 0 ) {
+				ret = Receive(client[i], buff, 0, &sessions[i]);
+				if (ret <= 0 ) {
 					FD_CLR(client[i], &initfds);
 					closesocket(client[i]);
 					client[i] = 0;
 					sessions[i] = {};
 				}
 				else {
+					msgRecv = decodeMessage(buff);
+					msgRes = handleMessage(msgRecv, &sessions[i]);
+					encodeMessage(msgRes, buff);
 					Send(client[i], buff, 0);
 				}
 			}

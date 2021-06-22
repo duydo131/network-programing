@@ -1,0 +1,5 @@
+﻿  Client.cpp
+d:\20202\lap tring mang\project\network-programing\client\client_module.h(73): warning C4101: 'clientIP': unreferenced local variable
+d:\20202\lap tring mang\project\network-programing\client\client_module.h(74): warning C4101: 'clientPort': unreferenced local variable
+  Client.vcxproj -> D:\20202\Lap tring mang\Project\network-programing\Debug\Client.exe
+  Client.vcxproj -> D:\20202\Lap tring mang\Project\network-programing\Debug\Client.pdb (Full PDB)
