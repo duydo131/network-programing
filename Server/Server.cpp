@@ -51,14 +51,12 @@ int main(int argc, char *argv[])
 	printf("Server started!\n");
 
 	// Load database
-	vector<Question> questions = getAllQuestions();
-
 	SOCKET client[FD_SETSIZE], connSock;
 	fd_set readfds, initfds; //use initfds to initiate readfds at the begining of every loop step
 	sockaddr_in clientAddr;
-	ClientSession clientSessions[FD_SETSIZE];
+	Session sessions[FD_SETSIZE];
 	
-	int nEvents, clientAddrLen = sizeof(clientAddr), clientPort, res;
+	int nEvents, clientAddrLen = sizeof(clientAddr), clientPort, ret;
 	char buff[BUFF_SIZE], clientIP[INET_ADDRSTRLEN];
 
 	for (int i = 0; i < FD_SETSIZE; i++)
@@ -66,6 +64,8 @@ int main(int argc, char *argv[])
 
 	FD_ZERO(&initfds);
 	FD_SET(listenSocket, &initfds);
+
+	Message msgRecv, msgRes;
 
 	// Communicate with clients
 	while (1) {
@@ -92,8 +92,8 @@ int main(int argc, char *argv[])
 					if (client[i] == 0) {
 						client[i] = connSock;
 						FD_SET(client[i], &initfds);
-						ClientSession session = { connSock, clientAddr, "", false };
-						clientSessions[i] = session;
+						Session session = { connSock, clientAddr, "", false };
+						sessions[i] = session;
 						break;
 					}
 
@@ -113,14 +113,17 @@ int main(int argc, char *argv[])
 				continue;
 
 			if (FD_ISSET(client[i], &readfds)) {
-				res = Receive(client[i], buff, 0, &clientSessions[i]);
-				if (res <= 0 ) {
+				ret = Receive(client[i], buff, 0, &sessions[i]);
+				if (ret <= 0 ) {
 					FD_CLR(client[i], &initfds);
 					closesocket(client[i]);
 					client[i] = 0;
-					clientSessions[i] = {};
+					sessions[i] = {};
 				}
 				else {
+					msgRecv = decodeMessage(buff);
+					msgRes = handleMessage(msgRecv, &sessions[i]);
+					encodeMessage(msgRes, buff);
 					Send(client[i], buff, 0);
 				}
 			}

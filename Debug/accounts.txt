@@ -1,0 +1,5 @@
+user user 1
+minhduc duc 1
+u u 1
+minhvu minh 1
+admin admin 1
