@@ -7,9 +7,9 @@
 #include <WS2tcpip.h>
 #include "Client_utils.h"
 #include "Client_module.h"
-
+ 
 #define BUFF_SIZE 2048
-#pragma comment(lib, "Ws2_32.lib")
+#pragma comment(lib, "Ws2_32.lib") 
 
 Message process_signup();
 Message process_signin();
