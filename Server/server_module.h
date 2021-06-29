@@ -1,35 +1,379 @@
 #pragma once
 
-// Server.cpp : Defines the entry point for the console application.
-//
-
 #include "stdafx.h"
 #include "stdio.h"
 #include "server_utils.h"
+#include <string>
+#include "fstream"
 #include "ws2tcpip.h"
 #include "winsock2.h"
-
-#define BUFF_SIZE 2048 // 2 MB
-
-#pragma comment(lib, "Ws2_32.lib")
 using namespace std;
 
-struct ClientSession {
+struct Room {
+	int number_of_question;
+	vector<Question> questions;
+	int length_time;
+	string start_time;
+};
+/*
+* Function to get all rooms in database
+* @returns list of room in database
+*/
+vector<Room> getAllRooms(string rooms_path) {
+	vector<Room> rooms;
+	string line;
+	ifstream file(rooms_path);
+	while (!file.eof())
+	{
+		getline(file, line);
+		Room room;
+		vector<string> data = split(line, SPACE_DELIMITER);
+		room.number_of_question = stoi(data[0]);
+		room.length_time = stoi(data[1]);
+		room.start_time = data[2]; 
+		rooms.push_back(room);
+	}
+	file.close();
+	return rooms;
+}
+
+string ACCOUNTS_PATH = "accounts.txt";
+string QUESTIONS_PATH = "questions.txt";
+string ROOMS_PATH = "rooms.txt";
+
+vector<Account> accounts = getAllAccounts(ACCOUNTS_PATH);
+vector<Question> questions = getAllQuestions(QUESTIONS_PATH);
+vector<Room> rooms = getAllRooms(ROOMS_PATH);
+
+enum Mode {
+	PRACTICE = 1,
+	TEST = 2
+};
+
+enum ResponseCode {
+	// Login
+	SUCCESS = 0,
+	ACCOUNT_EXISTED = 1,
+	ACCOUNT_LOGGED = 101,
+	INCORRECT_ACCOUNT = 102,
+	ACCOUNT_LOCKED = 103,
+	LOGGED = 104,
+	NO_LOGIN = 201,
+	BAD_REQUEST = 301,
+	// Command Error
+	COMMAND_ERROR = 404,
+
+	ROOM_STARTED = 501,
+	ROOM_NO_EXIST = 502,
+};
+
+struct Session {
 	SOCKET s;
 	sockaddr_in addr;
 	string username;
 	bool login;
 };
 
+time_t to_time_t(const string& timestamp) // throws on bad timestamp
+{
+	tm tm{};
+	tm.tm_year = stoi(timestamp.substr(0, 4)) - 1900;
+	tm.tm_mon = stoi(timestamp.substr(4, 2)) - 1;
+	tm.tm_mday = stoi(timestamp.substr(6, 2));
+	tm.tm_hour = stoi(timestamp.substr(8, 2));
+	tm.tm_min = stoi(timestamp.substr(10, 2));
+	tm.tm_sec = stoi(timestamp.substr(12, 2));
+
+	return mktime(addressof(tm));
+}
+
+int comparetime(time_t time1, time_t time2) {
+	return difftime(time1, time2) > 0.0 ? 1 : -1;
+}
+
+bool check_status_room(Room room) {
+	time_t current_time = time(0);
+	if (comparetime(to_time_t(room.start_time), current_time) == 1) return true;
+	else return false;
+}
+bool checkAccountExist(string username) {
+	int number_accounts = accounts.size();
+	for (int i = 0; i < number_accounts; i++) {
+		if (accounts[i].username == username && accounts[i].status == 1) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+* Function for client registry account
+* @param message: message to handle
+* @retruns response message for client
+*/
+Message registry(Message message) {
+	Message response;
+	response.opcode = message.opcode;
+
+	Account account;
+	vector<string> data = split(message.payload, Q_DELIMITER);
+	account.username = data[0];
+	account.password = data[1];
+	account.status = 1;
+
+	ResponseCode resCode;
+	if (!checkAccountExist(account.username)) {
+		saveAccount(account, ACCOUNTS_PATH);
+		accounts.push_back(account);
+		resCode = SUCCESS;
+	}
+	else {
+		resCode = ACCOUNT_EXISTED;
+	}
+
+	response.payload = to_string(resCode);
+	response.length = response.payload.length();
+
+	return response;
+}
+
+/**
+* Function for client login
+* @param message: message to handle
+* @param session: [IN/OUT] pointer session of client
+* @retruns response message for client
+*/
+Message login(Message message, Session *session) {
+	Message response;
+	response.opcode = message.opcode;
+
+	Account account;
+	vector<string> data = split(message.payload, Q_DELIMITER);
+	account.username = data[0];
+	account.password = data[1];
+
+	ResponseCode resCode = INCORRECT_ACCOUNT;
+
+	if (session->login) {
+		resCode = LOGGED;
+	}
+	else {
+		int number_accounts = accounts.size();
+		for (int i = 0; i < number_accounts; i++) {
+			if (accounts[i].username == account.username && accounts[i].password == account.password)
+			{
+				if (accounts[i].status == 1) {
+					if (accounts[i].login) {
+						resCode = ACCOUNT_LOGGED;
+					}
+					else {
+						accounts[i].login = true;
+						session->login = true;
+						session->username = account.username;
+						resCode = SUCCESS;
+					}
+				}
+				else {
+					resCode = ACCOUNT_LOCKED;
+				}
+				break;
+			}
+		}
+	}
+
+	response.payload = to_string(resCode);
+	response.length = response.payload.length();
+
+	return response;
+}
+
+/**
+* Function for client logout
+* @param message: message to handle
+* @param session: [IN/OUT] pointer session of client
+* @retruns response message for client
+*/
+Message logout(Message message, Session *session) {
+	Message response;
+	response.opcode = message.opcode;
+
+	ResponseCode resCode = BAD_REQUEST;
+
+	if (session->login)
+	{
+		int number_accounts = accounts.size();
+		for (int i = 0; i < number_accounts; i++) {
+			if (accounts[i].username == session->username && accounts[i].login == true && accounts[i].status == 1) {
+				accounts[i].login = false;
+				session->login = false;
+				session->username = "";
+				resCode = SUCCESS;
+				break;
+			}
+		}
+	}
+	else
+	{
+		resCode = NO_LOGIN;
+	}
+
+	response.payload = to_string(resCode);
+	response.length = response.payload.length();
+
+	return response;
+}
+
+/**
+* Function for client practice
+* @param message: message to handle
+* @param session: [IN/OUT] pointer session of client
+* @retruns response message for client
+*/
+Message practice(Message message, Session *session) {
+	Message response;
+	response.opcode = message.opcode;
+
+	ResponseCode resCode = BAD_REQUEST;
+
+	if (session->login)
+	{
+		resCode = SUCCESS;
+	}
+	else
+	{
+		resCode = NO_LOGIN;
+	}
+
+	response.payload = to_string(resCode);
+	response.length = response.payload.length();
+
+	return response;
+}
+
+/**
+* Function for client get info room
+* @param message: message to handle
+* @param session: [IN/OUT] pointer session of client
+* @retruns response message for client
+*/
+Message get_info_room(Message message, Session *session) {
+	Message response;
+	response.opcode = message.opcode;
+
+	ResponseCode resCode = SUCCESS;
+	string payload;
+	payload = to_string(resCode);
+	payload.append(SPACE_DELIMITER);
+	for (int i = 0; i < rooms.size(); i++) {
+		string number_question = to_string(rooms[i].number_of_question);
+		string length_time = to_string(rooms[i].length_time);
+		string start_time = rooms[i].start_time;
+		payload.append(number_question);
+		payload.append(A_DELIMITER);
+		payload.append(length_time);
+		payload.append(A_DELIMITER);
+		payload.append(start_time);
+		payload.append(Q_DELIMITER);
+	}
+	response.payload = payload;
+	cout << "payload"<<payload;
+	response.length = response.payload.length();
+
+	return response;
+}
+
+/**
+* Function for client access room
+* @param message: message to handle
+* @param session: [IN/OUT] pointer session of client
+* @retruns response message for client
+*/
+Message access_room(Message message, Session *session) {
+	Message response;
+	response.opcode = message.opcode;
+
+	ResponseCode resCode = BAD_REQUEST;
+	if (session->login)
+	{
+		int index_room = stoi(message.payload);
+		if (index_room >= 0 && index_room < rooms.size()) {
+			if (check_status_room(rooms[index_room])) {
+				resCode = SUCCESS;
+			}
+			else {
+				resCode = ROOM_STARTED;
+			}
+		}
+		else {
+			resCode = ROOM_NO_EXIST;
+		}
+	}
+	else
+	{
+		resCode = NO_LOGIN;
+	}
+	response.payload = to_string(resCode);
+	response.length = response.payload.length();
+
+	return response;
+}
+
+/**
+* Function to handle message
+* @param message: message to handle
+* @param session: [IN/OUT] pointer session of client to handle
+* @retruns response message for client
+*/
+Message handleMessage(Message message, Session *session) {
+	Message response;
+
+	switch (message.opcode)
+	{
+	case 2: {
+		// registry account process 
+		response = registry(message);
+		break;
+	}
+	case 3: {
+		// login process
+		response = login(message, session);
+		break;
+	}
+	case 4: {
+		// logout process
+		response = logout(message, session);
+		break;
+	}
+	case 5: {
+		// practice process
+		response = practice(message, session);
+		break;
+	}
+	case 9: {
+		// Get Info Room List Process
+		response = get_info_room(message, session);
+		break;
+	}
+	case 10: {
+		// Access Room Process
+		response = access_room(message, session);
+		break;
+	}
+	default:
+		break;
+	}
+	return response;
+}
+
 /**
 * Receive message of SOCKET
 * @param s: SOCKET receive message
 * @param buff: [OUT] char pointer to contain message receive
 * @param flags: flags for recv() function
-* @param session: ClientSession pointer, session of client connect to server
+* @param session: Session pointer, session of client connect to server
 * @retruns bytes received of last message
 */
-int Receive(SOCKET s, char *buff, int flags, ClientSession *session) {
+int Receive(SOCKET s, char *buff, int flags, Session *session) {
 	char recvBuff[BUFF_SIZE], tmpBuff[BUFF_SIZE] = "";
 	char clientIP[INET_ADDRSTRLEN];
 	int res, clientPort, i = 0, n = 0;
@@ -44,33 +388,47 @@ int Receive(SOCKET s, char *buff, int flags, ClientSession *session) {
 	while (true)
 	{
 		res = recv(s, recvBuff, BUFF_SIZE, flags);
-		if (res == SOCKET_ERROR) {
-			printf("Error %d: Cannot receive data from client[%s:%d]\n", WSAGetLastError(), clientIP, clientPort);
-			break;
-		}
-		else if (res == 0) {
+		if (res <= 0) {
 			printf("Client[%s:%d] disconnects\n", clientIP, clientPort);
+
+			// logout client
+			if (session->login) {
+				int number_accounts = accounts.size();
+				for (int i = 0; i < number_accounts; i++) {
+					if (accounts[i].username == session->username)
+					{
+						accounts[i].login = false;
+						session->login = false;
+						session->username = "";
+						break;
+					}
+				}
+			}
+
 			break;
 		}
 		else {
 			recvBuff[res] = 0;
 			printf("Receive from client[%s:%d]: %s\n", clientIP, clientPort, recvBuff);
 			strcat_s(tmpBuff, recvBuff);
-			n += res;
+
 			// get message to get length of message
 			if (i == 0) {
 				message = decodeMessage(recvBuff);
+				n += message.payload.length();
+			}
+			else {
+				n += res;
 			}
 
 			// check bytes received
-			if (n >= message.length + 3) {
+			if (n >= message.length) {
 				memcpy(buff, tmpBuff, BUFF_SIZE);
 				break;
 			}
 		}
 		i++;
 	}
-
 	return res;
 }
 
