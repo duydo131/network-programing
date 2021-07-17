@@ -15,10 +15,11 @@ Message process_signup();
 Message process_signin();
 Message process_signout();
 Message process_practice();
+Message process_get_question();
+Message process_get_info_room();
+Message process_access_room();
 void process_get_result();
 void process_setup_room();
-void process_get_info_room();
-void process_access_room();
 void process_submit();
 
 int menu() {
@@ -31,12 +32,14 @@ int menu() {
 		printf("2. Sign In\n");
 		printf("3. Sign Out\n");
 		printf("4. Practice\n");
+		printf("5. Get Info Room List\n");
+		printf("6. Access Room\n");
 		printf("Enter your choice: ");
 		gets_s(choice, 100);
 
 		c = (int)(choice[0] - 48);
 
-		if (strlen(choice) > 1 || c < 1 || c > 4)
+		if (strlen(choice) > 1 || c < 1 || c > 6)
 		{
 			printf("Your choice is incorrect. Please, try again!\n");
 		}
@@ -44,6 +47,19 @@ int menu() {
 	}
 
 	return (int)(choice[0] - 48);
+}
+
+void show_info_room(string info) {
+	cout <<"info" <<info;
+	vector<string> payloads = split(info, SPACE_DELIMITER);
+	vector<string> rooms_info = split(payloads[1], Q_DELIMITER);
+	for (int i = 0; i < rooms_info.size(); i++) {
+		vector<string> room_info = split(rooms_info[i], A_DELIMITER);
+		cout << "Room " << i << endl;
+		cout << "\tNumber of question : " << room_info[0] << endl;
+		cout << "\tLengh time : " << room_info[1] << endl;
+		cout << "\tStart time : " << room_info[2] << endl;
+	}
 }
 
 int main(int argc, char* argv[]) {
@@ -92,75 +108,90 @@ int main(int argc, char* argv[]) {
 
 		switch (menu())
 		{
-			case 1: {
-				// Sign Up Process
-				message = process_signup();
-				break;
-			}
-			case 2: {
-				// Sign In Process
-				message = process_signin();
-				break;
-			}
-			case 3: {
-				// Sign Out Process
-				message = process_signout();
-				break;
-			}
-			case 4: {
-				// Practice Process
-				message = process_practice();
-				break;
-			}
-			default:
-				break;
+		case 1: {
+			// Sign Up Process
+			message = process_signup();
+			break;
+		}
+		case 2: {
+			// Sign In Process
+			message = process_signin();
+			break;
+		}
+		case 3: {
+			// Sign Out Process
+			message = process_signout();
+			break;
+		}
+		case 4: {
+			// Practice Process
+			message = process_practice();
+			break;
+		}
+		case 5: {
+			// Get Info Room List Process
+			message = process_get_info_room();
+			break;
+		}
+		case 6: {
+			// Access Room Process
+			message = process_access_room();
+			break;
+		}
+		default:
+			break;
 		}
 
 		encodeMessage(message, buff);
-	
+
 		// send message to server
 		ret = Send(client, buff, 0);
 
 		// receive message from server
 		ret = Receive(client, buff, 0);
+		
 		message = decodeMessage(buff);
-
-		switch (stoi(message.payload))
+		cout << message.opcode;
+		string resCode = split(message.payload, SPACE_DELIMITER)[0];
+		switch (stoi(resCode))
 		{
-			case 0: {
-				cout << ">> Success" << endl;
-				break;
+		case 0: {
+			cout << ">> Success" << endl;
+			if (message.opcode == 9) {
+				show_info_room(message.payload);
 			}
-			case 1: {
-				cout << ">> Account exist!!!" << endl;
-				break;
-			}
-			case 101: {
-				cout << ">> Account is logined!!!" << endl;
-				break;
-			}
-			case 102: {
-				cout << ">> Username or Password is incorrect!!!" << endl;
-				break;
-			}
-			case 103: {
-				cout << ">> Account is locked!!!" << endl;
-				break;
-			}
-			case 104: {
-				cout << ">> You are logined!!!" << endl;
-				break;
-			}
-			case 201: {
-				cout << ">> You are not login!!!" << endl;
-				break;
-			}
-			case 404: {
-				cout << ">> Error UNKNOW!!!" << endl;
-				break;
-			}
-			default:
-				break;
+			break;
+		}
+		case 1: {
+			cout << ">> Account exist!!!" << endl;
+			break;
+		}
+		case 101: {
+			cout << ">> Account is logined!!!" << endl;
+			break;
+		}
+		case 102: {
+			cout << ">> Username or Password is incorrect!!!" << endl;
+			break;
+		}
+		case 103: {
+			cout << ">> Account is locked!!!" << endl;
+			break;
+		}
+		case 104: {
+			cout << ">> You are logined!!!" << endl;
+			break;
+		}
+		case 201: {
+			cout << ">> You are not login!!!" << endl;
+			break;
+		}
+		case 404: {
+			cout << ">> Error UNKNOW!!!" << endl;
+			break;
+		}
+		default:
+			break;
 		}
 	}
 
@@ -186,7 +217,7 @@ Message process_signup() {
 		getline(cin, password);
 		cout << "Enter password again: ";
 		getline(cin, passwordConfirm);
-		
+
 		if (password == passwordConfirm) {
 			break;
 		}
@@ -243,3 +274,35 @@ Message process_practice() {
 
 	return message;
 };
+
+Message process_get_question() {
+	Message message;
+
+	return message;
+};
+
+Message process_get_info_room() {
+	Message message;
+	message.opcode = 9;
+	message.length = 0;
+	message.payload = "";
+
+	return message;
+};
+
+Message process_access_room() {
+	Message message;
+	message.opcode = 10;
+	string room, payload;
+
+	cout << "Access room\n";
+	cout << "Enter room: ";
+	getline(cin, room);
+	payload = room;
+
+	message.length = payload.size();
+	message.payload = payload;
+
+	return message;
+};
+
