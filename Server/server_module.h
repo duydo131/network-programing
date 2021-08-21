@@ -263,20 +263,21 @@ Message get_info_room(Message message, Session *session) {
 	ResponseCode resCode = SUCCESS;
 	string payload;
 	payload = to_string(resCode);
-	payload.append(SPACE_DELIMITER);
+	payload.append(A_DELIMITER);
 	for (int i = 0; i < rooms.size(); i++) {
 		string number_question = to_string(rooms[i].number_of_question);
 		string length_time = to_string(rooms[i].length_time);
 		string start_time = rooms[i].start_time;
-		payload.append(number_question);
-		payload.append(A_DELIMITER);
-		payload.append(length_time);
-		payload.append(A_DELIMITER);
-		payload.append(start_time);
+		payload.append(to_string(i));
 		payload.append(Q_DELIMITER);
+		payload.append(number_question);
+		payload.append(Q_DELIMITER);
+		payload.append(length_time);
+		payload.append(Q_DELIMITER);
+		payload.append(start_time);
+		payload.append(A_DELIMITER);
 	}
 	response.payload = payload;
-	cout << "payload"<<payload;
 	response.length = response.payload.length();
 
 	return response;
@@ -319,6 +320,53 @@ Message access_room(Message message, Session *session) {
 }
 
 /**
+* Function for client get questions
+* @param message: message to handle
+* @param session: [IN/OUT] pointer session of client
+* @retruns response message for client
+*/
+Message get_question(Message message, Session *session) {
+	Message response;
+	response.opcode = message.opcode;
+
+	ResponseCode resCode = BAD_REQUEST;
+	if (session->login)
+	{
+		resCode = SUCCESS;
+		string payload;
+		payload = to_string(resCode);
+		payload.append(A_DELIMITER);
+		for (int i = 0; i < 10; i++) {
+			string id = to_string(questions[i].id);
+			string question = questions[i].question;
+			string options;
+			options.append(questions[i].options[0]);
+			options.append(Q_DELIMITER);
+			options.append(questions[i].options[1]);
+			options.append(Q_DELIMITER);
+			options.append(questions[i].options[2]);
+			options.append(Q_DELIMITER);
+			options.append(questions[i].options[3]);
+			payload.append(id);
+			payload.append(Q_DELIMITER);
+			payload.append(question);
+			payload.append(Q_DELIMITER);
+			payload.append(options);
+			payload.append(A_DELIMITER);
+		}
+		response.payload = payload;
+		response.length = response.payload.length();
+	}
+	else
+	{
+		resCode = NO_LOGIN;
+		response.payload = to_string(resCode);
+		response.length = response.payload.length();
+	}
+	return response;
+}
+
+/**
 * Function to handle message
 * @param message: message to handle
 * @param session: [IN/OUT] pointer session of client to handle
@@ -347,6 +395,11 @@ Message handleMessage(Message message, Session *session) {
 	case 5: {
 		// practice process
 		response = practice(message, session);
+		break;
+	}
+	case 6: {
+		// practice process
+		response = get_question(message, session);
 		break;
 	}
 	case 9: {
