@@ -24,12 +24,6 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="process.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="module.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="util.h">
       <Filter>Header Files</Filter>
     </ClInclude>

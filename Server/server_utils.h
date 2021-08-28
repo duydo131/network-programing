@@ -12,6 +12,31 @@ using namespace std;
 string Q_DELIMITER = "#%#";
 string A_DELIMITER = "$%$";
 string SPACE_DELIMITER = " ";
+string R_DELIMITER = "&%&";
+
+enum ResponseCode {
+	SUCCESS = 0,
+	ERROR_CODE = 1,
+
+	ACCOUNT_EXISTED = 201,
+
+	ACCOUNT_LOGGED = 304,
+	INCORRECT_ACCOUNT = 302,
+	ACCOUNT_LOCKED = 303,
+	LOGGED = 301,
+
+	NO_LOGIN = 101,
+	BAD_REQUEST = 102,
+	// Command Error
+	COMMAND_ERROR = 404,
+
+	ROOM_STARTED = 501,
+	ROOM_NO_EXIST = 502,
+
+	ERROR_RESULT = 701,
+
+	ERROR_SETUP_ROOM = 801;
+};
 
 struct Message {
 	int opcode;

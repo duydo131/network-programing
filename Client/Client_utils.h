@@ -10,6 +10,7 @@ using namespace std;
 string Q_DELIMITER = "#%#";
 string A_DELIMITER = "$%$";
 string SPACE_DELIMITER = " ";
+string R_DELIMITER = "&%&";
 
 struct Message {
 	int opcode;

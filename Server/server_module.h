@@ -50,23 +50,6 @@ enum Mode {
 	TEST = 2
 };
 
-enum ResponseCode {
-	// Login
-	SUCCESS = 0,
-	ACCOUNT_EXISTED = 1,
-	ACCOUNT_LOGGED = 101,
-	INCORRECT_ACCOUNT = 102,
-	ACCOUNT_LOCKED = 103,
-	LOGGED = 104,
-	NO_LOGIN = 201,
-	BAD_REQUEST = 301,
-	// Command Error
-	COMMAND_ERROR = 404,
-
-	ROOM_STARTED = 501,
-	ROOM_NO_EXIST = 502,
-};
-
 struct Session {
 	SOCKET s;
 	sockaddr_in addr;
@@ -106,6 +89,72 @@ bool checkAccountExist(string username) {
 	return false;
 }
 
+bool validate_result(vector<string> rs) {
+	for (string r : rs) {
+		if (r != "A" || r != "B" || r != "C" || r != "D") return false;
+	}
+	return true;
+}
+
+Message process_check_result(Message message, Session *session) {
+	Message response;
+
+	vector<string> rs = split(message.payload, " ");
+
+	string payload;
+	if (rs.size() == questions.size() && validate_result(rs)) {
+		int correct = 0, wrong = 0;
+		for (int i = 0; i < rs.size(); i++) {
+			if (rs[i] != questions[i].answer) wrong++;
+			else correct++;
+		}
+		string res = to_string(correct) + " " + to_string(wrong);
+		response.opcode = SUCCESS;
+		response.payload = res;
+		response.length = response.payload.length();
+	}
+	else {
+		response.opcode = ERROR_CODE;
+		response.payload = ERROR_RESULT;
+		response.length = response.payload.length();
+	}
+
+	return response;
+}
+
+Message process_setup_room(Message message, Session *session) {
+	Message response;
+	response.opcode = ERROR_CODE;
+	response.payload = ERROR_SETUP_ROOM;
+	response.length = response.payload.length();
+
+	Room room;
+	/*int number_of_question;
+	vector<Question> questions;
+	int length_time;
+	string start_time;*/
+	vector<string> data = split(message.payload, Q_DELIMITER);
+	if (data.size() == 3) {
+		try {
+			int number_of_question = stoi(data[0]);
+			int length_time = stoi(data[1]);
+			string start_time = data[2];
+			room.number_of_question = number_of_question;
+			room.length_time = length_time;
+			room.start_time = start_time;
+			response.opcode = SUCCESS;
+			response.payload = "";
+			// save room to file
+			// random question
+			response.length = 0;
+		}
+		catch (const char* msg) {
+			// pass
+		}
+	}
+	return response;
+}
+
 /**
 * Function for client registry account
 * @param message: message to handle
@@ -113,7 +162,6 @@ bool checkAccountExist(string username) {
 */
 Message registry(Message message) {
 	Message response;
-	response.opcode = message.opcode;
 
 	Account account;
 	vector<string> data = split(message.payload, Q_DELIMITER);
@@ -125,9 +173,10 @@ Message registry(Message message) {
 	if (!checkAccountExist(account.username)) {
 		saveAccount(account, ACCOUNTS_PATH);
 		accounts.push_back(account);
-		resCode = SUCCESS;
+		response.opcode = SUCCESS;
 	}
 	else {
+		response.opcode = ERROR_CODE;
 		resCode = ACCOUNT_EXISTED;
 	}
 
@@ -145,7 +194,7 @@ Message registry(Message message) {
 */
 Message login(Message message, Session *session) {
 	Message response;
-	response.opcode = message.opcode;
+	response.opcode = ERROR_CODE;
 
 	Account account;
 	vector<string> data = split(message.payload, Q_DELIMITER);
@@ -170,7 +219,7 @@ Message login(Message message, Session *session) {
 						accounts[i].login = true;
 						session->login = true;
 						session->username = account.username;
-						resCode = SUCCESS;
+						response.opcode = SUCCESS;
 					}
 				}
 				else {
@@ -180,9 +229,10 @@ Message login(Message message, Session *session) {
 			}
 		}
 	}
-
-	response.payload = to_string(resCode);
-	response.length = response.payload.length();
+	if (response.opcode != SUCCESS) {
+		response.payload = to_string(resCode);
+		response.length = response.payload.length();
+	}
 
 	return response;
 }
@@ -195,7 +245,7 @@ Message login(Message message, Session *session) {
 */
 Message logout(Message message, Session *session) {
 	Message response;
-	response.opcode = message.opcode;
+	response.opcode = ERROR_CODE;
 
 	ResponseCode resCode = BAD_REQUEST;
 
@@ -207,7 +257,7 @@ Message logout(Message message, Session *session) {
 				accounts[i].login = false;
 				session->login = false;
 				session->username = "";
-				resCode = SUCCESS;
+				response.opcode = SUCCESS;
 				break;
 			}
 		}
@@ -216,10 +266,10 @@ Message logout(Message message, Session *session) {
 	{
 		resCode = NO_LOGIN;
 	}
-
-	response.payload = to_string(resCode);
-	response.length = response.payload.length();
-
+	if (response.opcode != SUCCESS) {
+		response.payload = to_string(resCode);
+		response.length = response.payload.length();
+	}
 	return response;
 }
 
@@ -231,22 +281,23 @@ Message logout(Message message, Session *session) {
 */
 Message practice(Message message, Session *session) {
 	Message response;
-	response.opcode = message.opcode;
+	response.opcode = ERROR_CODE;
 
 	ResponseCode resCode = BAD_REQUEST;
 
 	if (session->login)
 	{
-		resCode = SUCCESS;
+		response.opcode = SUCCESS;
 	}
 	else
 	{
 		resCode = NO_LOGIN;
 	}
 
-	response.payload = to_string(resCode);
-	response.length = response.payload.length();
-
+	if (response.opcode != SUCCESS) {
+		response.payload = to_string(resCode);
+		response.length = response.payload.length();
+	}
 	return response;
 }
 
@@ -257,7 +308,7 @@ Message practice(Message message, Session *session) {
 * @retruns response message for client
 */
 Message get_info_room(Message message, Session *session) {
-	Message response;
+	/*Message response;
 	response.opcode = message.opcode;
 
 	ResponseCode resCode = SUCCESS;
@@ -279,6 +330,26 @@ Message get_info_room(Message message, Session *session) {
 	cout << "payload"<<payload;
 	response.length = response.payload.length();
 
+	return response;*/
+
+	Message response;
+	response.opcode = SUCCESS;
+	string payload;
+	for (int i = 0; i < rooms.size(); i++) {
+		string number_question = to_string(rooms[i].number_of_question);
+		string length_time = to_string(rooms[i].length_time);
+		string start_time = rooms[i].start_time;
+		payload.append(number_question);
+		payload.append(A_DELIMITER);
+		payload.append(length_time);
+		payload.append(A_DELIMITER);
+		payload.append(start_time);
+		payload.append(Q_DELIMITER);
+	}
+	response.payload = payload;
+	cout << "payload" << payload;
+	response.length = response.payload.length();
+
 	return response;
 }
 
@@ -290,7 +361,7 @@ Message get_info_room(Message message, Session *session) {
 */
 Message access_room(Message message, Session *session) {
 	Message response;
-	response.opcode = message.opcode;
+	response.opcode = ERROR_CODE;
 
 	ResponseCode resCode = BAD_REQUEST;
 	if (session->login)
@@ -298,7 +369,7 @@ Message access_room(Message message, Session *session) {
 		int index_room = stoi(message.payload);
 		if (index_room >= 0 && index_room < rooms.size()) {
 			if (check_status_room(rooms[index_room])) {
-				resCode = SUCCESS;
+				response.opcode = SUCCESS;
 			}
 			else {
 				resCode = ROOM_STARTED;
@@ -312,9 +383,54 @@ Message access_room(Message message, Session *session) {
 	{
 		resCode = NO_LOGIN;
 	}
-	response.payload = to_string(resCode);
-	response.length = response.payload.length();
+	if(response.opcode != SUCCESS){
+		response.payload = to_string(resCode);
+		response.length = response.payload.length();
+	}
 
+	return response;
+}
+
+/**
+* Function for client get questions
+* @param message: message to handle
+* @param session: [IN/OUT] pointer session of client
+* @retruns response message for client
+*/
+Message get_question(Message message, Session *session) {
+	Message response;
+
+	if (session->login)
+	{
+		response.opcode = SUCCESS;
+		string payload;
+		for (int i = 0; i < 10; i++) {
+			string id = to_string(questions[i].id);
+			string question = questions[i].question;
+			string options;
+			options.append(questions[i].options[0]);
+			options.append(Q_DELIMITER);
+			options.append(questions[i].options[1]);
+			options.append(Q_DELIMITER);
+			options.append(questions[i].options[2]);
+			options.append(Q_DELIMITER);
+			options.append(questions[i].options[3]);
+			payload.append(id);
+			payload.append(Q_DELIMITER);
+			payload.append(question);
+			payload.append(Q_DELIMITER);
+			payload.append(options);
+			payload.append(A_DELIMITER);
+		}
+		response.payload = payload;
+		response.length = response.payload.length();
+	}
+	else
+	{
+		response.opcode = ERROR_CODE;
+		response.payload = to_string(NO_LOGIN);
+		response.length = response.payload.length();
+	}
 	return response;
 }
 
@@ -347,6 +463,21 @@ Message handleMessage(Message message, Session *session) {
 	case 5: {
 		// practice process
 		response = practice(message, session);
+		break;
+	}
+	case 6: {
+		// practice process
+		response = get_question(message, session);
+		break;
+	}
+	case 7: {
+		// practice process
+		response = process_check_result(message, session);
+		break;
+	}
+	case 8: {
+		// practice process
+		response = process_setup_room(message, session);
 		break;
 	}
 	case 9: {

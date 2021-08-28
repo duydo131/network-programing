@@ -3,6 +3,7 @@
 #include "fstream"
 #include "string"
 #include "vector"
+#include "time.h"
 #include "ws2tcpip.h"
 #include "winsock2.h"
 
@@ -19,6 +20,93 @@ typedef struct Room {
 	int length_time;
 	long long start_time;
 } Room;
+
+time_t to_time_t(const string& timestamp) // throws on bad timestamp
+{
+	tm tm{};
+	tm.tm_year = stoi(timestamp.substr(0, 4)) - 1900;
+	tm.tm_mon = stoi(timestamp.substr(4, 2)) - 1;
+	tm.tm_mday = stoi(timestamp.substr(6, 2));
+	tm.tm_hour = stoi(timestamp.substr(8, 2));
+	tm.tm_min = stoi(timestamp.substr(10, 2));
+	tm.tm_sec = stoi(timestamp.substr(12, 2));
+
+	return mktime(addressof(tm));
+}
+
+int comparetime(time_t time1, time_t time2) {
+	return difftime(time1, time2) > 0.0 ? 1 : -1;
+}
+
+bool check_start_time(string time) {
+	string const timestamp = time;
+	time_t start_time = to_time_t(timestamp);
+	time_t now = time_t(0);
+	int i = comparetime(now, start_time);
+	return i < 0;
+}
+
+bool is_leap(int year)
+{
+	return (((year % 4 == 0) && (year % 100 != 0)) || (year % 400 == 0));
+}
+
+bool is_valid_date(int d, int m, int y)
+{
+	if (y > 9999 || y < 1800) return false;
+	if (m < 1 || m > 12) return false;
+	if (d < 1 || d > 31) return false;
+	if (m == 2) return (is_leap(y)) ? (d <= 29) : (d <= 28);
+	if (m == 4 || m == 6 || m == 9 || m == 11) return d <= 30;
+	return true;
+}
+
+int get_line(string description, int min = 0, int max = INT_MAX) {
+	string in;
+	int out;
+	while (true) {
+		try {
+			cout << description + " : ";
+			getline(cin, in);
+			out = stoi(in);
+			if (out < min || out > max) throw 1;
+			return out;
+		}
+		catch (exception &err) {
+			cout << description + " not valid!!!\n";
+			cout << "Press key to continue!!\n";
+			getch;
+			system("CLS");
+		}
+	}
+}
+
+string get_start_time() {
+	int year, month, day, hour, minute, second;
+	while (true) {
+		try {
+
+			year = get_line("Year", 1000, 9999);
+			month = get_line("Month", 1, 12);
+			day = get_line("Day", 1, 31);
+			if (!is_valid_date(day, month, year)) throw 1;
+			hour = get_line("Hour", 0, 23);
+			minute = get_line("Minute", 0, 59);
+			second = get_line("Second", 0, 59);
+			string out = to_string(year) + to_string(month) + to_string(day) 
+				+ to_string(hour) + to_string(minute) + to_string(second);
+			return out;
+		}
+		catch (exception &ex) {
+			cout << "Invalid Date!!!\n";
+			cout << "Press key to continue!!\n";
+			getch;
+			system("CLS");
+		}
+	}
+	return "";
+}
+
 
 /*
 bool decode_room(string in, Room &r) {

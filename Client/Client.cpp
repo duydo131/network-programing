@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include <stdio.h>
+#include <conio.h>
 #include <winsock2.h>
 #include <WS2tcpip.h>
 #include "Client_utils.h"
@@ -11,6 +12,8 @@
 #define BUFF_SIZE 2048
 #pragma comment(lib, "Ws2_32.lib")
 
+string result = "";
+
 Message process_signup();
 Message process_signin();
 Message process_signout();
@@ -18,9 +21,8 @@ Message process_practice();
 Message process_get_question();
 Message process_get_info_room();
 Message process_access_room();
-void process_get_result();
-void process_setup_room();
-void process_submit();
+Message process_get_result();
+Message process_setup_room();
 
 int menu() {
 	char choice[100];
@@ -306,3 +308,27 @@ Message process_access_room() {
 	return message;
 };
 
+
+Message process_get_result() {
+	Message message;
+	message.opcode = 7;
+	message.payload = result;
+	message.length = message.payload.length;
+	return message;
+}
+
+Message process_setup_room() {
+	Message message;
+	message.opcode = 8;
+	int number_of_question, length_time;
+	string start_time;
+
+	cout << "Setup Room\n";
+	number_of_question = get_line("Number of question");
+	length_time = get_line("Length time");
+	start_time = get_start_time();
+	string payload = to_string(number_of_question) + R_DELIMITER + to_string(length_time) + R_DELIMITER + start_time;
+	message.payload = payload;
+	message.length = message.payload.length;
+	return message;
+}
