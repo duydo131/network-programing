@@ -24,6 +24,8 @@ Message process_access_room();
 Message process_get_result();
 Message process_setup_room();
 
+
+
 int menu() {
 	char choice[100];
 	int c;
@@ -36,12 +38,13 @@ int menu() {
 		printf("4. Practice\n");
 		printf("5. Get Info Room List\n");
 		printf("6. Access Room\n");
+		printf("7. Get question\n");
 		printf("Enter your choice: ");
 		gets_s(choice, 100);
 
 		c = (int)(choice[0] - 48);
 
-		if (strlen(choice) > 1 || c < 1 || c > 6)
+		if (strlen(choice) > 1 || c < 1 || c > 7)
 		{
 			printf("Your choice is incorrect. Please, try again!\n");
 		}
@@ -52,18 +55,27 @@ int menu() {
 }
 
 void show_info_room(string info) {
-	cout <<"info" <<info;
-	vector<string> payloads = split(info, SPACE_DELIMITER);
-	vector<string> rooms_info = split(payloads[1], Q_DELIMITER);
-	for (int i = 0; i < rooms_info.size(); i++) {
-		vector<string> room_info = split(rooms_info[i], A_DELIMITER);
-		cout << "Room " << i << endl;
-		cout << "\tNumber of question : " << room_info[0] << endl;
-		cout << "\tLengh time : " << room_info[1] << endl;
-		cout << "\tStart time : " << room_info[2] << endl;
+	vector<string> payloads = split(info, A_DELIMITER);
+	for (int j = 1; j < payloads.size() - 1; j++) {
+		vector<string> room_info = split(payloads[j], Q_DELIMITER);
+		cout << "Room " << room_info[0] << endl;
+		cout << "\tNumber of question : " << room_info[1] << endl;
+		cout << "\tLengh time : " << room_info[2] << endl;
+		cout << "\tStart time : " << formatTime(room_info[3]) << endl;
 	}
 }
-
+void show_questions(string payload) {
+	vector<string> payloads = split(payload, A_DELIMITER);
+	for (int j = 1; j < payloads.size() - 1; j++) {
+		vector<string> question = split(payloads[j], Q_DELIMITER);
+		cout << question[0] << "." << endl;
+		cout << question[1] << endl;
+		cout << question[2] << endl;// A
+		cout << question[3] << endl;// B
+		cout << question[4] << endl;// C
+		cout << question[5] << endl;// D
+	}
+}
 int main(int argc, char* argv[]) {
 	if (argc != 3)
 	{
@@ -140,6 +152,11 @@ int main(int argc, char* argv[]) {
 			message = process_access_room();
 			break;
 		}
+		case 7: {
+			// Get Question Process
+			message = process_get_question();
+			break;
+		}
 		default:
 			break;
 		}
@@ -151,16 +168,17 @@ int main(int argc, char* argv[]) {
 
 		// receive message from server
 		ret = Receive(client, buff, 0);
-		
 		message = decodeMessage(buff);
-		cout << message.opcode;
-		string resCode = split(message.payload, SPACE_DELIMITER)[0];
+		string resCode = split(message.payload, A_DELIMITER)[0];
 		switch (stoi(resCode))
 		{
 		case 0: {
 			cout << ">> Success" << endl;
 			if (message.opcode == 9) {
 				show_info_room(message.payload);
+			}
+			else if (message.opcode == 6) {
+				show_questions(message.payload);
 			}
 			break;
 		}
@@ -279,7 +297,9 @@ Message process_practice() {
 
 Message process_get_question() {
 	Message message;
-
+	message.opcode = 6;
+	message.length = 0;
+	message.payload = "";
 	return message;
 };
 

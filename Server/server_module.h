@@ -314,20 +314,21 @@ Message get_info_room(Message message, Session *session) {
 	ResponseCode resCode = SUCCESS;
 	string payload;
 	payload = to_string(resCode);
-	payload.append(SPACE_DELIMITER);
+	payload.append(A_DELIMITER);
 	for (int i = 0; i < rooms.size(); i++) {
 		string number_question = to_string(rooms[i].number_of_question);
 		string length_time = to_string(rooms[i].length_time);
 		string start_time = rooms[i].start_time;
-		payload.append(number_question);
-		payload.append(A_DELIMITER);
-		payload.append(length_time);
-		payload.append(A_DELIMITER);
-		payload.append(start_time);
+		payload.append(to_string(i));
 		payload.append(Q_DELIMITER);
+		payload.append(number_question);
+		payload.append(Q_DELIMITER);
+		payload.append(length_time);
+		payload.append(Q_DELIMITER);
+		payload.append(start_time);
+		payload.append(A_DELIMITER);
 	}
 	response.payload = payload;
-	cout << "payload"<<payload;
 	response.length = response.payload.length();
 
 	return response;*/

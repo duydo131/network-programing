@@ -77,10 +77,57 @@ void encodeMessage(Message message, char *buff) {
 */
 Message decodeMessage(char *buff) {
 	string msg = convertToString(buff, strlen(buff));
-	vector<string> data = split(msg, SPACE_DELIMITER);
+
 	Message message;
-	message.opcode = stoi(data[0]);
-	message.length = stoi(data[1]);
-	message.payload = data[2];
+
+	vector<string> data;
+	string substr;
+	int start = 0, end;
+
+	// Get opcode
+	end = msg.find(SPACE_DELIMITER);
+	substr = msg.substr(start, end - start);
+	start = end + SPACE_DELIMITER.size();
+	message.opcode = stoi(substr);
+
+	// Get length
+	end = msg.find(SPACE_DELIMITER);
+	substr = msg.substr(start, end - start);
+	start = end + SPACE_DELIMITER.size();
+	message.length = stoi(substr);
+
+	// Get payload
+	end = msg.find(SPACE_DELIMITER, end+1);
+	substr = msg.substr(end, msg.length() - end);
+	message.payload = substr;
 	return message;
+}
+
+/*
+* Function to format time
+* @param time: [IN] time need format
+* @returns time format
+*/
+string formatTime(string time) {
+	string res;
+	res.push_back(time[8]);
+	res.push_back(time[9]);
+	res.push_back(':');
+	res.push_back(time[10]);
+	res.push_back(time[11]);
+	res.push_back(':');
+	res.push_back(time[12]);
+	res.push_back(time[13]);
+	res.push_back(' ');
+	res.push_back(time[6]);
+	res.push_back(time[7]);
+	res.push_back('-');
+	res.push_back(time[4]);
+	res.push_back(time[5]);
+	res.push_back('-');
+	res.push_back(time[0]);
+	res.push_back(time[1]);
+	res.push_back(time[2]);
+	res.push_back(time[3]);
+	return res;
 }
