@@ -35,7 +35,7 @@ enum ResponseCode {
 
 	ERROR_RESULT = 701,
 
-	ERROR_SETUP_ROOM = 801;
+	ERROR_SETUP_ROOM = 801
 };
 
 struct Message {

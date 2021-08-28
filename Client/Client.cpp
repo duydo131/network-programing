@@ -9,22 +9,26 @@
 #include "Client_utils.h"
 #include "Client_module.h"
 
+using namespace std;
+
 #define BUFF_SIZE 2048
 #pragma comment(lib, "Ws2_32.lib")
 
 string result = "";
 
-Message process_signup();
-Message process_signin();
-Message process_signout();
-Message process_practice();
-Message process_get_question();
-Message process_get_info_room();
-Message process_access_room();
-Message process_get_result();
-Message process_setup_room();
+SOCKET client;
+char buff[BUFF_SIZE];
+int ret;
 
-
+void process_signup();
+void process_signin();
+void process_signout();
+void process_practice();
+void process_get_question();
+void process_get_info_room();
+void process_access_room();
+void process_get_result();
+void process_setup_room();
 
 int menu() {
 	char choice[100];
@@ -61,21 +65,38 @@ void show_info_room(string info) {
 		cout << "Room " << room_info[0] << endl;
 		cout << "\tNumber of question : " << room_info[1] << endl;
 		cout << "\tLengh time : " << room_info[2] << endl;
-		cout << "\tStart time : " << formatTime(room_info[3]) << endl;
+		cout << "\tStart time : " << formatTime(room_info[3]) << endl << endl;
 	}
 }
 void show_questions(string payload) {
 	vector<string> payloads = split(payload, A_DELIMITER);
+	result = "";
 	for (int j = 1; j < payloads.size() - 1; j++) {
 		vector<string> question = split(payloads[j], Q_DELIMITER);
-		cout << question[0] << "." << endl;
-		cout << question[1] << endl;
-		cout << question[2] << endl;// A
-		cout << question[3] << endl;// B
-		cout << question[4] << endl;// C
-		cout << question[5] << endl;// D
+		cout << "ID " << question[0] << ":" <<  question[1] << endl;
+		cout << "A. " << question[2] << endl;// A
+		cout << "B. " << question[3] << endl;// B
+		cout << "C. " << question[4] << endl;// C
+		cout << "D. " << question[5] << endl;// D
+		
+		string in;
+		while (true) {
+			cout << "\nChoose 1 answer : ";
+			getline(cin, in);
+			if (validate_result(in)) break;
+		}
+		result += in + SPACE_DELIMITER;
+		system("CLS");
 	}
 }
+
+void show_result(string payload) {
+	vector<string> rs = split(payload, SPACE_DELIMITER);
+	cout << "Result: " << endl;
+	cout << "Right: " << rs[0] << endl;
+	cout << "Wrong: " << rs[1] << endl;
+}
+
 int main(int argc, char* argv[]) {
 	if (argc != 3)
 	{
@@ -100,7 +121,6 @@ int main(int argc, char* argv[]) {
 	inet_pton(AF_INET, SERVER_ADDR, &serverAddr.sin_addr);
 
 	// Construct Socket
-	SOCKET client;
 	client = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (client == INVALID_SOCKET) {
 		printf("Server %d : cannot create client socket.", WSAGetLastError());
@@ -113,10 +133,6 @@ int main(int argc, char* argv[]) {
 		return 0;
 	}
 
-	char buff[BUFF_SIZE];
-	int ret;
-	Message message;
-
 	// comunicate with server
 	while (1) {
 
@@ -124,95 +140,95 @@ int main(int argc, char* argv[]) {
 		{
 		case 1: {
 			// Sign Up Process
-			message = process_signup();
+			process_signup();
 			break;
 		}
 		case 2: {
 			// Sign In Process
-			message = process_signin();
+			process_signin();
 			break;
 		}
 		case 3: {
 			// Sign Out Process
-			message = process_signout();
+			process_signout();
 			break;
 		}
 		case 4: {
 			// Practice Process
-			message = process_practice();
+			process_practice();
 			break;
 		}
 		case 5: {
 			// Get Info Room List Process
-			message = process_get_info_room();
+			process_get_info_room();
 			break;
 		}
 		case 6: {
 			// Access Room Process
-			message = process_access_room();
+			process_access_room();
 			break;
 		}
 		case 7: {
 			// Get Question Process
-			message = process_get_question();
+			process_get_question();
 			break;
 		}
 		default:
 			break;
 		}
 
-		encodeMessage(message, buff);
+	//	encodeMessage(message, buff);
 
-		// send message to server
-		ret = Send(client, buff, 0);
+	//	// send message to server
+	//	ret = Send(client, buff, 0);
 
-		// receive message from server
-		ret = Receive(client, buff, 0);
-		message = decodeMessage(buff);
-		string resCode = split(message.payload, A_DELIMITER)[0];
-		switch (stoi(resCode))
-		{
-		case 0: {
-			cout << ">> Success" << endl;
-			if (message.opcode == 9) {
-				show_info_room(message.payload);
-			}
-			else if (message.opcode == 6) {
-				show_questions(message.payload);
-			}
-			break;
-		}
-		case 1: {
-			cout << ">> Account exist!!!" << endl;
-			break;
-		}
-		case 101: {
-			cout << ">> Account is logined!!!" << endl;
-			break;
-		}
-		case 102: {
-			cout << ">> Username or Password is incorrect!!!" << endl;
-			break;
-		}
-		case 103: {
-			cout << ">> Account is locked!!!" << endl;
-			break;
-		}
-		case 104: {
-			cout << ">> You are logined!!!" << endl;
-			break;
-		}
-		case 201: {
-			cout << ">> You are not login!!!" << endl;
-			break;
-		}
-		case 404: {
-			cout << ">> Error UNKNOW!!!" << endl;
-			break;
-		}
-		default:
-			break;
-		}
+	//	// receive message from server
+	//	ret = Receive(client, buff, 0);
+	//	message = decodeMessage(buff);
+	//	string resCode = split(message.payload, A_DELIMITER)[0];
+	//	switch (stoi(resCode))
+	//	{
+	//	case 0: {
+	//		cout << ">> Success" << endl;
+	//		if (message.opcode == 9) {
+	//			show_info_room(message.payload);
+	//		}
+	//		else if (message.opcode == 6) {
+	//			show_questions(message.payload);
+	//		}
+	//		break;
+	//	}
+	//	case 1: {
+	//		cout << ">> Account exist!!!" << endl;
+	//		break;
+	//	}
+	//	case 101: {
+	//		cout << ">> Account is logined!!!" << endl;
+	//		break;
+	//	}
+	//	case 102: {
+	//		cout << ">> Username or Password is incorrect!!!" << endl;
+	//		break;
+	//	}
+	//	case 103: {
+	//		cout << ">> Account is locked!!!" << endl;
+	//		break;
+	//	}
+	//	case 104: {
+	//		cout << ">> You are logined!!!" << endl;
+	//		break;
+	//	}
+	//	case 201: {
+	//		cout << ">> You are not login!!!" << endl;
+	//		break;
+	//	}
+	//	case 404: {
+	//		cout << ">> Error UNKNOW!!!" << endl;
+	//		break;
+	//	}
+	//	default:
+	//		break;
+	//	}
 	}
 
 	// close socket
@@ -222,7 +238,7 @@ int main(int argc, char* argv[]) {
 	return 0;
 }
 
-Message process_signup() {
+void process_signup() {
 	Message message;
 	message.opcode = 2;
 	string username, password, passwordConfirm, payload;
@@ -253,10 +269,31 @@ Message process_signup() {
 	message.length = payload.size();
 	message.payload = payload;
 
-	return message;
+	encodeMessage(message, buff);
+	// send message to server
+	ret = Send(client, buff, 0);
+
+	// receive message from server
+	ret = Receive(client, buff, 0);
+	message = decodeMessage(buff);
+
+	if (message.opcode == SUCCESS) cout << "Sigup Success!!";
+	else {
+		switch (stoi(message.payload))
+		{
+		case ACCOUNT_EXISTED:
+			cout << "Account existed";
+			break;
+		default:
+			cout << "Error Server";
+		}
+	}
+	cout << "\nPress key to continue!!\n";
+	getch;
+	system("CLS");
 };
 
-Message process_signin() {
+void process_signin() {
 	Message message;
 	message.opcode = 3;
 	string username, password, payload;
@@ -274,45 +311,162 @@ Message process_signin() {
 	message.length = payload.size();
 	message.payload = payload;
 
-	return message;
+	encodeMessage(message, buff);
+	// send message to server
+	ret = Send(client, buff, 0);
+
+	// receive message from server
+	ret = Receive(client, buff, 0);
+	message = decodeMessage(buff);
+	if (message.opcode == SUCCESS) cout << "Login Success!!";
+	else {
+		switch (stoi(message.payload))
+		{
+		case LOGGED:
+			cout << "Account logged";
+			break;
+		case INCORRECT_ACCOUNT:
+			cout << "Account incorrect";
+			break;
+		case ACCOUNT_LOCKED:
+			cout << "Account locked";
+			break;
+		case ACCOUNT_LOGGED:
+			cout << "Account login elsewhere";
+			break;
+		default:
+			cout << "Error Server";
+		}
+	}
+	cout << "\nPress key to continue!!\n";
+	getch;
+	system("CLS");
 };
 
-Message process_signout() {
+void process_signout() {
 	Message message;
 	message.opcode = 4;
 	message.length = 0;
 	message.payload = "";
 
-	return message;
+	encodeMessage(message, buff);
+	// send message to server
+	ret = Send(client, buff, 0);
+
+	// receive message from server
+	ret = Receive(client, buff, 0);
+	message = decodeMessage(buff);
+	if (message.opcode == SUCCESS) cout << "Logout Success!!";
+	else {
+		switch (stoi(message.payload))
+		{
+		case NO_LOGIN:
+			cout << "You are not logged in!!";
+			break;
+		default:
+			cout << "Error Server";
+		}
+	}
+	cout << "\nPress key to continue!!\n";
+	getch;
+	system("CLS");
 };
 
-Message process_practice() {
+void process_practice() {
 	Message message;
 	message.opcode = 5;
 	message.length = 0;
 	message.payload = "";
 
-	return message;
+	encodeMessage(message, buff);
+	// send message to server
+	ret = Send(client, buff, 0);
+
+	// receive message from server
+	ret = Receive(client, buff, 0);
+	message = decodeMessage(buff);
+	if (message.opcode == SUCCESS) cout << "not process!!";
+	else {
+		switch (stoi(message.payload))
+		{
+		case NO_LOGIN:
+			cout << "You are not logged in!!";
+			break;
+		default:
+			cout << "Error Server";
+		}
+	}
+	cout << "\nPress key to continue!!\n";
+	getch;
+	system("CLS");
 };
 
-Message process_get_question() {
+void process_get_question() {
 	Message message;
 	message.opcode = 6;
 	message.length = 0;
 	message.payload = "";
-	return message;
+
+	encodeMessage(message, buff);
+	// send message to server
+	ret = Send(client, buff, 0);
+
+	// receive message from server
+	ret = Receive(client, buff, 0);
+	message = decodeMessage(buff);
+	if (message.opcode == SUCCESS) {
+		show_questions(message.payload);
+		result = result.substr(0, result.length() - 1);
+		process_get_result();
+	}
+	else {
+		switch (stoi(message.payload))
+		{
+		case NO_LOGIN:
+			cout << "You are not logged in!!";
+			break;
+		default:
+			cout << "Error Server";
+		}
+	}
+	cout << "\nPress key to continue!!\n";
+	getch;
+	system("CLS");
 };
 
-Message process_get_info_room() {
+void process_get_info_room() {
 	Message message;
 	message.opcode = 9;
 	message.length = 0;
 	message.payload = "";
 
-	return message;
+	encodeMessage(message, buff);
+	// send message to server
+	ret = Send(client, buff, 0);
+
+	// receive message from server
+	ret = Receive(client, buff, 0);
+	message = decodeMessage(buff);
+	if (message.opcode == SUCCESS) {
+		show_info_room(message.payload);
+		// no process
+	}
+	else {
+		switch (stoi(message.payload))
+		{
+		case NO_LOGIN:
+			cout << "You are not logged in!!";
+			break;
+		default:
+			cout << "Error Server";
+		}
+	}
+	cout << "\nPress key to continue!!\n";
+	getch;
+	system("CLS");
 };
 
-Message process_access_room() {
+void process_access_room() {
 	Message message;
 	message.opcode = 10;
 	string room, payload;
@@ -325,19 +479,70 @@ Message process_access_room() {
 	message.length = payload.size();
 	message.payload = payload;
 
-	return message;
+	encodeMessage(message, buff);
+	// send message to server
+	ret = Send(client, buff, 0);
+
+	// receive message from server
+	ret = Receive(client, buff, 0);
+	message = decodeMessage(buff);
+	if (message.opcode == SUCCESS) {
+		process_get_question();
+	}
+	else {
+		switch (stoi(message.payload))
+		{
+		case NO_LOGIN:
+			cout << "You are not logged in!!";
+			break;
+		case ROOM_STARTED:
+			cout << "Room started!!";
+			break;
+		case ROOM_NO_EXIST:
+			cout << "Room not exist!!";
+			break;
+		default:
+			cout << "Error Server";
+		}
+	}
+	cout << "\nPress key to continue!!\n";
+	getch;
+	system("CLS");
 };
 
 
-Message process_get_result() {
+void process_get_result() {
 	Message message;
 	message.opcode = 7;
 	message.payload = result;
-	message.length = message.payload.length;
-	return message;
+	message.length = message.payload.length();
+
+	encodeMessage(message, buff);
+	// send message to server
+	ret = Send(client, buff, 0);
+
+	// receive message from server
+	ret = Receive(client, buff, 0);
+	message = decodeMessage(buff);
+	if (message.opcode == SUCCESS) {
+		show_result(message.payload);
+	}
+	else {
+		switch (stoi(message.payload))
+		{
+		case ERROR_RESULT:
+			cout << "Bad request";
+			break;
+		default:
+			cout << "Error Server";
+		}
+	}
+	cout << "\nPress key to continue!!\n";
+	getch;
+	system("CLS");
 }
 
-Message process_setup_room() {
+void process_setup_room() {
 	Message message;
 	message.opcode = 8;
 	int number_of_question, length_time;
@@ -349,6 +554,33 @@ Message process_setup_room() {
 	start_time = get_start_time();
 	string payload = to_string(number_of_question) + R_DELIMITER + to_string(length_time) + R_DELIMITER + start_time;
 	message.payload = payload;
-	message.length = message.payload.length;
-	return message;
+	message.length = message.payload.length();
+
+	encodeMessage(message, buff);
+	// send message to server
+	ret = Send(client, buff, 0);
+
+	// receive message from server
+	ret = Receive(client, buff, 0);
+	message = decodeMessage(buff);
+	if (message.opcode == SUCCESS) {
+		cout << "Setup Room Success!!" << endl;
+		cout << "Room " << message.payload << endl;
+		cout << "\tNumber of question : " << number_of_question << endl;
+		cout << "\tLengh time : " << length_time << endl;
+		cout << "\tStart time : " << formatTime(start_time) << endl << endl;
+	}
+	else {
+		switch (stoi(message.payload))
+		{
+		case ERROR_RESULT:
+			cout << "Bad request";
+			break;
+		default:
+			cout << "Error Server";
+		}
+	}
+	cout << "\nPress key to continue!!\n";
+	getch;
+	system("CLS");
 }

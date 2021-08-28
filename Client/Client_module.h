@@ -10,6 +10,7 @@
 using namespace std;
 
 struct Question {
+	int id;
 	string question;
 	string options[4];
 	string answer;
@@ -21,8 +22,7 @@ typedef struct Room {
 	long long start_time;
 } Room;
 
-time_t to_time_t(const string& timestamp) // throws on bad timestamp
-{
+time_t to_time_t(const string& timestamp){
 	tm tm{};
 	tm.tm_year = stoi(timestamp.substr(0, 4)) - 1900;
 	tm.tm_mon = stoi(timestamp.substr(4, 2)) - 1;
@@ -93,8 +93,8 @@ string get_start_time() {
 			hour = get_line("Hour", 0, 23);
 			minute = get_line("Minute", 0, 59);
 			second = get_line("Second", 0, 59);
-			string out = to_string(year) + to_string(month) + to_string(day) 
-				+ to_string(hour) + to_string(minute) + to_string(second);
+			string out = to_string(year) + format_form_date(month) + format_form_date(day)
+				+ format_form_date(hour) + format_form_date(minute) + format_form_date(second);
 			return out;
 		}
 		catch (exception &ex) {
@@ -107,6 +107,10 @@ string get_start_time() {
 	return "";
 }
 
+string format_form_date(int i) {
+	string out = "00" +to_string(i);
+	return out.substr(out.length() - 2, 2);
+}
 
 /*
 bool decode_room(string in, Room &r) {

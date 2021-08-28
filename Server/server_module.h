@@ -108,14 +108,14 @@ Message process_check_result(Message message, Session *session) {
 			if (rs[i] != questions[i].answer) wrong++;
 			else correct++;
 		}
-		string res = to_string(correct) + " " + to_string(wrong);
+		string res = to_string(correct) + SPACE_DELIMITER + to_string(wrong);
 		response.opcode = SUCCESS;
 		response.payload = res;
 		response.length = response.payload.length();
 	}
 	else {
 		response.opcode = ERROR_CODE;
-		response.payload = ERROR_RESULT;
+		response.payload = to_string(ERROR_RESULT);
 		response.length = response.payload.length();
 	}
 
@@ -125,14 +125,9 @@ Message process_check_result(Message message, Session *session) {
 Message process_setup_room(Message message, Session *session) {
 	Message response;
 	response.opcode = ERROR_CODE;
-	response.payload = ERROR_SETUP_ROOM;
-	response.length = response.payload.length();
+	response.payload = to_string(ERROR_SETUP_ROOM);
 
 	Room room;
-	/*int number_of_question;
-	vector<Question> questions;
-	int length_time;
-	string start_time;*/
 	vector<string> data = split(message.payload, Q_DELIMITER);
 	if (data.size() == 3) {
 		try {
@@ -143,15 +138,17 @@ Message process_setup_room(Message message, Session *session) {
 			room.length_time = length_time;
 			room.start_time = start_time;
 			response.opcode = SUCCESS;
-			response.payload = "";
+			//return id room
+			response.payload = "id";
 			// save room to file
 			// random question
-			response.length = 0;
 		}
-		catch (const char* msg) {
+		catch (exception &ex) {
 			// pass
 		}
 	}
+
+	response.length = response.payload.length();
 	return response;
 }
 
