@@ -122,7 +122,7 @@ Message decodeMessage(char *buff) {
 
 	// Get payload
 	end = msg.find(SPACE_DELIMITER, end+1);
-	substr = msg.substr(end, msg.length() - end);
+	substr = msg.substr(end + 1, msg.length() - end);
 	message.payload = substr;
 	return message;
 }

@@ -18,7 +18,7 @@ string result = "";
 
 SOCKET client;
 char buff[BUFF_SIZE];
-int ret;
+int ret, size_room = INT_MAX;
 
 void process_signup();
 void process_signin();
@@ -42,7 +42,7 @@ int menu() {
 		printf("4. Practice\n");
 		printf("5. Get Info Room List\n");
 		printf("6. Access Room\n");
-		printf("7. Get question\n");
+		printf("7. Setup Room\n");
 		printf("Enter your choice: ");
 		gets_s(choice, 100);
 
@@ -59,9 +59,10 @@ int menu() {
 }
 
 void show_info_room(string info) {
-	vector<string> payloads = split(info, A_DELIMITER);
-	for (int j = 1; j < payloads.size() - 1; j++) {
-		vector<string> room_info = split(payloads[j], Q_DELIMITER);
+	vector<string> payloads = split(info, Q_DELIMITER);
+	size_room = payloads.size() - 1;
+	for (int j = 0; j < payloads.size() - 1; j++) {
+		vector<string> room_info = split(payloads[j], A_DELIMITER);
 		cout << "Room " << room_info[0] << endl;
 		cout << "\tNumber of question : " << room_info[1] << endl;
 		cout << "\tLengh time : " << room_info[2] << endl;
@@ -71,13 +72,13 @@ void show_info_room(string info) {
 void show_questions(string payload) {
 	vector<string> payloads = split(payload, A_DELIMITER);
 	result = "";
-	for (int j = 1; j < payloads.size() - 1; j++) {
+	for (int j = 0; j < payloads.size() - 1; j++) {
 		vector<string> question = split(payloads[j], Q_DELIMITER);
 		cout << "ID " << question[0] << ":" <<  question[1] << endl;
-		cout << "A. " << question[2] << endl;// A
-		cout << "B. " << question[3] << endl;// B
-		cout << "C. " << question[4] << endl;// C
-		cout << "D. " << question[5] << endl;// D
+		cout << question[2] << endl;// A
+		cout << question[3] << endl;// B
+		cout << question[4] << endl;// C
+		cout << question[5] << endl;// D
 		
 		string in;
 		while (true) {
@@ -85,7 +86,7 @@ void show_questions(string payload) {
 			getline(cin, in);
 			if (validate_result(in)) break;
 		}
-		result += in + SPACE_DELIMITER;
+		result += in + A_DELIMITER;
 		system("CLS");
 	}
 }
@@ -164,71 +165,17 @@ int main(int argc, char* argv[]) {
 			break;
 		}
 		case 6: {
-			// Access Room Process
+			// access room process
 			process_access_room();
 			break;
 		}
 		case 7: {
-			// Get Question Process
-			process_get_question();
-			break;
+			process_setup_room();
+			break; 
 		}
 		default:
 			break;
 		}
-
-	//	encodeMessage(message, buff);
-
-	//	// send message to server
-	//	ret = Send(client, buff, 0);
-
-	//	// receive message from server
-	//	ret = Receive(client, buff, 0);
-	//	message = decodeMessage(buff);
-	//	string resCode = split(message.payload, A_DELIMITER)[0];
-	//	switch (stoi(resCode))
-	//	{
-	//	case 0: {
-	//		cout << ">> Success" << endl;
-	//		if (message.opcode == 9) {
-	//			show_info_room(message.payload);
-	//		}
-	//		else if (message.opcode == 6) {
-	//			show_questions(message.payload);
-	//		}
-	//		break;
-	//	}
-	//	case 1: {
-	//		cout << ">> Account exist!!!" << endl;
-	//		break;
-	//	}
-	//	case 101: {
-	//		cout << ">> Account is logined!!!" << endl;
-	//		break;
-	//	}
-	//	case 102: {
-	//		cout << ">> Username or Password is incorrect!!!" << endl;
-	//		break;
-	//	}
-	//	case 103: {
-	//		cout << ">> Account is locked!!!" << endl;
-	//		break;
-	//	}
-	//	case 104: {
-	//		cout << ">> You are logined!!!" << endl;
-	//		break;
-	//	}
-	//	case 201: {
-	//		cout << ">> You are not login!!!" << endl;
-	//		break;
-	//	}
-	//	case 404: {
-	//		cout << ">> Error UNKNOW!!!" << endl;
-	//		break;
-	//	}
-	//	default:
-	//		break;
-	//	}
 	}
 
 	// close socket
@@ -289,7 +236,7 @@ void process_signup() {
 		}
 	}
 	cout << "\nPress key to continue!!\n";
-	getch;
+	_getch();
 	system("CLS");
 };
 
@@ -339,7 +286,7 @@ void process_signin() {
 		}
 	}
 	cout << "\nPress key to continue!!\n";
-	getch;
+	_getch();
 	system("CLS");
 };
 
@@ -368,7 +315,7 @@ void process_signout() {
 		}
 	}
 	cout << "\nPress key to continue!!\n";
-	getch;
+	_getch();
 	system("CLS");
 };
 
@@ -385,7 +332,9 @@ void process_practice() {
 	// receive message from server
 	ret = Receive(client, buff, 0);
 	message = decodeMessage(buff);
-	if (message.opcode == SUCCESS) cout << "not process!!";
+	if (message.opcode == SUCCESS) {
+		process_get_question();
+	}
 	else {
 		switch (stoi(message.payload))
 		{
@@ -397,7 +346,7 @@ void process_practice() {
 		}
 	}
 	cout << "\nPress key to continue!!\n";
-	getch;
+	_getch();
 	system("CLS");
 };
 
@@ -416,7 +365,7 @@ void process_get_question() {
 	message = decodeMessage(buff);
 	if (message.opcode == SUCCESS) {
 		show_questions(message.payload);
-		result = result.substr(0, result.length() - 1);
+		result = result.substr(0, result.length() - A_DELIMITER.length());
 		process_get_result();
 	}
 	else {
@@ -429,9 +378,6 @@ void process_get_question() {
 			cout << "Error Server";
 		}
 	}
-	cout << "\nPress key to continue!!\n";
-	getch;
-	system("CLS");
 };
 
 void process_get_info_room() {
@@ -449,7 +395,6 @@ void process_get_info_room() {
 	message = decodeMessage(buff);
 	if (message.opcode == SUCCESS) {
 		show_info_room(message.payload);
-		// no process
 	}
 	else {
 		switch (stoi(message.payload))
@@ -462,24 +407,25 @@ void process_get_info_room() {
 		}
 	}
 	cout << "\nPress key to continue!!\n";
-	getch;
+	_getch();
 	system("CLS");
 };
 
 void process_access_room() {
 	Message message;
 	message.opcode = 10;
-	string room, payload;
+	string payload;
+	int room;
 
 	cout << "Access room\n";
-	cout << "Enter room: ";
-	getline(cin, room);
-	payload = room;
+	room = get_line("Enter room", 1, size_room);
+	payload = to_string(room - 1);
 
 	message.length = payload.size();
 	message.payload = payload;
 
 	encodeMessage(message, buff);
+	cout << buff << endl;
 	// send message to server
 	ret = Send(client, buff, 0);
 
@@ -506,7 +452,7 @@ void process_access_room() {
 		}
 	}
 	cout << "\nPress key to continue!!\n";
-	getch;
+	_getch();
 	system("CLS");
 };
 
@@ -537,9 +483,6 @@ void process_get_result() {
 			cout << "Error Server";
 		}
 	}
-	cout << "\nPress key to continue!!\n";
-	getch;
-	system("CLS");
 }
 
 void process_setup_room() {
@@ -565,7 +508,7 @@ void process_setup_room() {
 	message = decodeMessage(buff);
 	if (message.opcode == SUCCESS) {
 		cout << "Setup Room Success!!" << endl;
-		cout << "Room " << message.payload << endl;
+		//cout << "Room " << message.payload << endl;
 		cout << "\tNumber of question : " << number_of_question << endl;
 		cout << "\tLengh time : " << length_time << endl;
 		cout << "\tStart time : " << formatTime(start_time) << endl << endl;
@@ -581,6 +524,6 @@ void process_setup_room() {
 		}
 	}
 	cout << "\nPress key to continue!!\n";
-	getch;
+	_getch();
 	system("CLS");
 }

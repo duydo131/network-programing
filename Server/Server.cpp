@@ -114,6 +114,9 @@ int main(int argc, char *argv[])
 
 			if (FD_ISSET(client[i], &readfds)) {
 				ret = Receive(client[i], buff, 0, &sessions[i]);
+				cout << "----------\n";
+				cout << buff << endl;
+				cout << "----------\n";
 				if (ret <= 0 ) {
 					FD_CLR(client[i], &initfds);
 					closesocket(client[i]);

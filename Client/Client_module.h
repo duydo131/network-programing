@@ -75,10 +75,15 @@ int get_line(string description, int min = 0, int max = INT_MAX) {
 		catch (exception &err) {
 			cout << description + " not valid!!!\n";
 			cout << "Press key to continue!!\n";
-			getch;
+			_getch();
 			system("CLS");
 		}
 	}
+}
+
+string format_form_date(int i) {
+	string out = "00" + to_string(i);
+	return out.substr(out.length() - 2, 2);
 }
 
 string get_start_time() {
@@ -100,16 +105,11 @@ string get_start_time() {
 		catch (exception &ex) {
 			cout << "Invalid Date!!!\n";
 			cout << "Press key to continue!!\n";
-			getch;
+			_getch();
 			system("CLS");
 		}
 	}
 	return "";
-}
-
-string format_form_date(int i) {
-	string out = "00" +to_string(i);
-	return out.substr(out.length() - 2, 2);
 }
 
 /*
@@ -177,7 +177,7 @@ int Receive(SOCKET s, char *buff, int flags) {
 		}
 		else {
 			recvBuff[res] = 0;
-			printf("Receive from server: %s\n", recvBuff);
+			//printf("Receive from server: %s\n", recvBuff);
 			strcat_s(tmpBuff, recvBuff);
 
 			// get message to get length of message

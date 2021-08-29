@@ -14,6 +14,9 @@ string A_DELIMITER = "$%$";
 string SPACE_DELIMITER = " ";
 string R_DELIMITER = "&%&";
 
+int QUESTION_SIZE = 4;
+int QUESTION_SIZE_PRACTICE = 4;
+
 enum ResponseCode {
 	SUCCESS = 0,
 	ERROR_CODE = 1,
