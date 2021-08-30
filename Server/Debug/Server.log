@@ -1,8 +1,9 @@
 ﻿  Server.cpp
 d:\20202\program\network programing\project\server\server_module.h(125): warning C4018: '<': signed/unsigned mismatch
-d:\20202\program\network programing\project\server\server_module.h(191): warning C4018: '<': signed/unsigned mismatch
-d:\20202\program\network programing\project\server\server_module.h(230): warning C4101: 'ex': unreferenced local variable
-d:\20202\program\network programing\project\server\server_module.h(393): warning C4018: '<': signed/unsigned mismatch
+d:\20202\program\network programing\project\server\server_module.h(199): warning C4018: '<': signed/unsigned mismatch
+d:\20202\program\network programing\project\server\server_module.h(218): warning C4018: '<': signed/unsigned mismatch
+d:\20202\program\network programing\project\server\server_module.h(264): warning C4101: 'ex': unreferenced local variable
+d:\20202\program\network programing\project\server\server_module.h(427): warning C4018: '<': signed/unsigned mismatch
 d:\20202\program\network programing\project\server\server.cpp(52): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
   Server.vcxproj -> D:\20202\program\network programing\Project\Debug\Server.exe
   Server.vcxproj -> D:\20202\program\network programing\Project\Debug\Server.pdb (Full PDB)

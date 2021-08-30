@@ -11,6 +11,7 @@ string Q_DELIMITER = "#%#";
 string A_DELIMITER = "$%$";
 string SPACE_DELIMITER = " ";
 string R_DELIMITER = "&%&";
+string M_DELIMITER = "%$%";
 
 string PRACTICE = "PRACTICE";
 string NOT_ACCESS_ROOM = "ERROR";
@@ -36,6 +37,8 @@ enum ResponseCode {
 	ROOM_STARTED = 501,
 	ROOM_NO_EXIST = 502,
 
+	NO_GET_QUESTION = 601,
+
 	ERROR_RESULT = 701,
 
 	ERROR_SETUP_ROOM = 801,
@@ -45,10 +48,6 @@ struct Message {
 	int opcode;
 	int length;
 	string payload;
-};
-
-struct Time {
-	int second;
 };
 
 /*

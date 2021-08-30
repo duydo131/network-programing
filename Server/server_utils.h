@@ -12,7 +12,8 @@ using namespace std;
 string Q_DELIMITER = "#%#";
 string A_DELIMITER = "$%$";
 string SPACE_DELIMITER = " ";
-string R_DELIMITER = "&%&";
+string R_DELIMITER = "&%&"; 
+string M_DELIMITER = "%$%";
 
 string PRACTICE = "PRACTICE";
 
@@ -52,6 +53,8 @@ enum ResponseCode {
 
 	ROOM_STARTED = 501,
 	ROOM_NO_EXIST = 502,
+
+	NO_GET_QUESTION = 601,
 
 	ERROR_RESULT = 701,
 

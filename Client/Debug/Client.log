@@ -3,8 +3,8 @@ d:\20202\program\network programing\project\client\client_module.h(76): warning 
 d:\20202\program\network programing\project\client\client_module.h(106): warning C4101: 'ex': unreferenced local variable
 d:\20202\program\network programing\project\client\client_module.h(166): warning C4101: 'clientIP': unreferenced local variable
 d:\20202\program\network programing\project\client\client_module.h(167): warning C4101: 'clientPort': unreferenced local variable
-d:\20202\program\network programing\project\client\client.cpp(74): warning C4018: '<': signed/unsigned mismatch
-d:\20202\program\network programing\project\client\client.cpp(86): warning C4018: '<': signed/unsigned mismatch
-d:\20202\program\network programing\project\client\client.cpp(115): warning C4018: '<': signed/unsigned mismatch
+d:\20202\program\network programing\project\client\client.cpp(91): warning C4018: '<': signed/unsigned mismatch
+d:\20202\program\network programing\project\client\client.cpp(104): warning C4018: '<': signed/unsigned mismatch
+d:\20202\program\network programing\project\client\client.cpp(133): warning C4018: '<': signed/unsigned mismatch
   Client.vcxproj -> D:\20202\program\network programing\Project\Debug\Client.exe
   Client.vcxproj -> D:\20202\program\network programing\Project\Debug\Client.pdb (Full PDB)

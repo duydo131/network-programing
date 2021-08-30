@@ -10,6 +10,8 @@
 #include "Client_module.h"
 
 #include "process.h"
+#include <future>
+#include <thread>
 
 using namespace std;
 
@@ -23,10 +25,9 @@ char buff[BUFF_SIZE];
 int ret, seek = 0;
 Room room;
 string user = "";
-boolean flag = false, done = false;
-vector<Room> info_room;
-
-CRITICAL_SECTION critical;
+boolean flag = false, show_question = true, fetch_question = true;
+vector<Room> info_room; 
+future<void> compute_thread;
 
 void process_signup();
 void process_signin();
@@ -39,14 +40,16 @@ void process_get_result();
 void process_setup_room();
 int get_question(int);
 
-unsigned __stdcall echoThread(void *param) {
-	Time* input = (Time*)param;
-	Sleep(input->second);
-
-	EnterCriticalSection(&critical);
-	
-	LeaveCriticalSection(&critical);
-	return 0;
+ void fetch() {
+	while (true && fetch_question) {
+		int ret = get_question(seek);
+		if (ret < 0) {
+			cout << "Error Server!! Try again!!\n";
+			return;
+		}
+		if (seek >= room.number_of_question) break;
+	}
+	return;
 }
 
 int menu() {
@@ -89,7 +92,7 @@ void show_info_room(string info) {
 		vector<string> room_info = split(payloads[j], A_DELIMITER);
 		cout << (j + 1) << ". Room ID: " << room_info[0] << endl;
 		cout << "\tNumber of question : " << room_info[1] << endl;
-		cout << "\tLengh time : " << room_info[2] << endl;
+		cout << "\tLengh time : " << room_info[2] << "s" << endl;
 		cout << "\tStart time : " << formatTime(room_info[3]) << endl << endl;
 	}
 }
@@ -106,7 +109,7 @@ void show_questions(string payload) {
 		cout << question[5] << endl;// D
 		seek++;
 		string in;
-		while (true) {
+		while (true && show_question) {
 			cout << "\nChoose 1 answer : ";
 			getline(cin, in);
 			if (validate_result(in)) break;
@@ -123,7 +126,7 @@ void show_result(string payload) {
 	cout << "Wrong: " << rs[1] << endl;
 }
 
-void save_info_room(string payload) {system("CLS");
+void save_info_room(string payload) {
 	info_room.clear();
 	vector<string> payloads = split(payload, Q_DELIMITER);
 	for (int j = 0; j < payloads.size() - 1; j++) {
@@ -203,7 +206,6 @@ int main(int argc, char* argv[]) {
 		printf("Server %d : cannot create client socket.", WSAGetLastError());
 		return 0;
 	}
-
 	// request connect
 	if (connect(client, (sockaddr *)&serverAddr, sizeof(serverAddr))) {
 		printf("Error %d Cannot connect server.\n", WSAGetLastError());
@@ -253,7 +255,6 @@ int main(int argc, char* argv[]) {
 			break;
 		}
 	}
-
 	// close socket
 	closesocket(client);
 	// terminate WinSock
@@ -461,6 +462,9 @@ int get_question(int seek) {
 		case ROOM_NO_EXIST:
 			cout << "Room not exists!!\n";
 			break;
+		case NO_GET_QUESTION:
+			cout << "Not fetch question!!\n";
+			break;
 		default:
 			cout << "Error Server";
 		}
@@ -473,6 +477,8 @@ void process_get_question() {
 	result = "";
 	seek = 0;
 	int ret;
+	show_question = true;
+	fetch_question = true;
 	if(room.id == NOT_ACCESS_ROOM) cout << "NOT ACCESS ROOM!!!!!!\n";
 	else{
 		if (room.id == PRACTICE) {
@@ -486,13 +492,13 @@ void process_get_question() {
 			}
 		}
 		else {
-			while (true) {
-				ret = get_question(seek); 
-				if (ret < 0) {
-					cout << "Error Server!! Try again!!\n";
-					return;
-				}
-				if (seek >= room.number_of_question) break;
+			auto timeToWait = chrono::system_clock::now() + chrono::milliseconds(room.length_time * 1000);
+			compute_thread = async(fetch);
+			future_status status = compute_thread.wait_until(timeToWait);
+			if (status != future_status::ready) {
+				cout << "\nOver!!!!\n";
+				show_question = false;
+				fetch_question = false;
 			}
 		}
 		result = result.substr(0, result.length() - A_DELIMITER.length());
@@ -565,7 +571,7 @@ void process_access_room() {
 void process_get_result() {
 	Message message;
 	message.opcode = 7;
-	message.payload = result;
+	message.payload = room.id + M_DELIMITER + result;
 	message.length = message.payload.length();
 
 	encodeMessage(message, buff);

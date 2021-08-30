@@ -17,7 +17,7 @@ struct Question {
 }; 
 
 struct Room {
-	string id;
+	string id = PRACTICE;
 	int number_of_question;
 	int length_time;
 	string start_time;
