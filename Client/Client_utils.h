@@ -12,6 +12,11 @@ string A_DELIMITER = "$%$";
 string SPACE_DELIMITER = " ";
 string R_DELIMITER = "&%&";
 
+string PRACTICE = "PRACTICE";
+string NOT_ACCESS_ROOM = "ERROR";
+
+int QUESTION_SIZE_PRACTICE = 4;
+
 enum ResponseCode {
 	SUCCESS = 0,
 	ERROR_CODE = 1,
@@ -40,6 +45,10 @@ struct Message {
 	int opcode;
 	int length;
 	string payload;
+};
+
+struct Time {
+	int second;
 };
 
 /*
@@ -101,7 +110,6 @@ void encodeMessage(Message message, char *buff) {
 */
 Message decodeMessage(char *buff) {
 	string msg = convertToString(buff, strlen(buff));
-
 	Message message;
 
 	vector<string> data;

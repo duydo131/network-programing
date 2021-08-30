@@ -7,14 +7,10 @@
 #include "fstream"
 #include "ws2tcpip.h"
 #include "winsock2.h"
+#include "list"
+#include <stdlib.h>     /* srand, rand */
 using namespace std;
 
-struct Room {
-	int number_of_question;
-	vector<Question> questions;
-	int length_time;
-	string start_time;
-};
 /*
 * Function to get all rooms in database
 * @returns list of room in database
@@ -26,23 +22,17 @@ vector<Room> getAllRooms(string rooms_path) {
 	while (!file.eof())
 	{
 		getline(file, line);
+		if (line == "") continue;
 		Room room;
 		vector<string> data = split(line, SPACE_DELIMITER);
-		room.number_of_question = stoi(data[0]);
-		room.length_time = stoi(data[1]);
-		room.start_time = data[2];
+		room.id = data[0];
+		room.number_of_question = stoi(data[1]);
+		room.length_time = stoi(data[2]);
+		room.start_time = data[3];
 		rooms.push_back(room);
 	}
 	file.close();
 	return rooms;
-}
-
-int save_room(string rooms_path, Room room) {
-	ofstream outfile(rooms_path, ios::app);
-	if (outfile.fail()) return -1;
-	outfile << endl << room.number_of_question << SPACE_DELIMITER << room.length_time << SPACE_DELIMITER << room.start_time;
-	outfile.close();
-	return 1;
 }
 
 string ACCOUNTS_PATH = "accounts.txt";
@@ -53,16 +43,14 @@ vector<Account> accounts = getAllAccounts(ACCOUNTS_PATH);
 vector<Question> questions = getAllQuestions(QUESTIONS_PATH);
 vector<Room> rooms = getAllRooms(ROOMS_PATH);
 
-enum Mode {
-	PRACTICE = 1,
-	TEST = 2
-};
-
 struct Session {
 	SOCKET s;
 	sockaddr_in addr;
-	string username;
+	char username[50];
 	bool login;
+	char clientIP[INET_ADDRSTRLEN];
+	int clientPort;
+	int seek;
 };
 
 time_t to_time_t(const string& timestamp) // throws on bad timestamp
@@ -97,6 +85,96 @@ bool checkAccountExist(string username) {
 	return false;
 }
 
+// ------------
+string decode_question(Question q) {
+	string payload = "";
+	string id = to_string(q.id);
+	string question = q.question;
+	string options;
+	options.append(q.options[0]);
+	options.append(Q_DELIMITER);
+	options.append(q.options[1]);
+	options.append(Q_DELIMITER);
+	options.append(q.options[2]);
+	options.append(Q_DELIMITER);
+	options.append(q.options[3]);
+	payload.append(id);
+	payload.append(Q_DELIMITER);
+	payload.append(question);
+	payload.append(Q_DELIMITER);
+	payload.append(options);
+	payload.append(A_DELIMITER);
+	return payload;
+}
+
+int decode_room(Room &room, string payload) {
+	vector<string> info_room = split(payload, A_DELIMITER);
+	try {
+		room.id = info_room[0];
+		room.number_of_question = stoi(info_room[1]);
+		room.length_time = stoi(info_room[2]);
+		room.start_time = info_room[3];
+		return 1;
+	}
+	catch (exception ex) {
+		return -1;
+	}
+}
+
+int get_room(string id) {
+	for (int i = 0; i < rooms.size(); i++) {
+		if (rooms[i].id == id) return i;
+	}
+	return -1;
+}
+
+string generate_id(Session* session) {
+	time_t seconds = time(NULL);
+	char id[100];
+	sprintf_s(id, 100, "%s%d%ld", session->clientIP, session->clientPort, (long)seconds);
+	return convertToString(id, strlen(id));
+}
+
+int inline random_index(int max) {
+	return rand() % max;
+}
+
+vector<int> random_question(int number_of_question) {
+	vector<int> rs;
+	list<int> temp;
+	int length_of_all_question = questions.size();
+	for (int i = 0; i < length_of_all_question; i++) {
+		temp.push_back(i);
+	}
+	int index;
+	list<int>::iterator it;
+	for (int i = 0; i < number_of_question; i++) {
+		index = random_index(temp.size());
+		it = temp.begin();
+		advance(it, index);
+		rs.push_back(*it);
+		temp.erase(it);
+	}
+	return rs;
+}
+
+void load_question(Room &room) {
+	vector<int> ramdom_intdex_question = random_question(room.number_of_question);
+	room.questions.clear();
+	for (int i : ramdom_intdex_question) room.questions.push_back(questions[i]);
+}
+
+int save_room(string rooms_path, Room room) {
+	ofstream outfile(rooms_path, ios::app);
+	if (outfile.fail()) return -1;
+	outfile << endl << room.id << SPACE_DELIMITER 
+					<< room.number_of_question << SPACE_DELIMITER 
+					<< room.length_time << SPACE_DELIMITER 
+					<< room.start_time;
+	outfile.close();
+	return 1;
+}
+
 bool validate_result(vector<string> rs) {
 	for (string r : rs) {
 		if (r != "A" && r != "B" && r != "C" && r != "D") return false;
@@ -108,7 +186,6 @@ Message process_check_result(Message message, Session *session) {
 	Message response;
 	vector<string> rs = split(message.payload, A_DELIMITER);
 	string payload;
-	//if (rs.size() == questions.size() && validate_result(rs)) 
 	if (validate_result(rs)) {
 		int correct = 0, wrong = 0;
 		for (int i = 0; i < rs.size(); i++) {
@@ -144,6 +221,7 @@ Message process_setup_room(Message message, Session *session) {
 			room.number_of_question = number_of_question;
 			room.length_time = length_time;
 			room.start_time = start_time;
+			room.id = generate_id(session);
 			int res = save_room(ROOMS_PATH, room);
 			if (res < 0) throw 1;
 			rooms.push_back(room);
@@ -219,7 +297,7 @@ Message login(Message message, Session *session) {
 					else {
 						accounts[i].login = true;
 						session->login = true;
-						session->username = account.username;
+						strcpy_s(session->username, account.username.length() + 1, account.username.c_str());
 						response.opcode = SUCCESS;
 					}
 				}
@@ -254,10 +332,10 @@ Message logout(Message message, Session *session) {
 	{
 		int number_accounts = accounts.size();
 		for (int i = 0; i < number_accounts; i++) {
-			if (accounts[i].username == session->username && accounts[i].login == true && accounts[i].status == 1) {
+			if (accounts[i].username == convertToString(session->username, strlen(session->username)) && accounts[i].login == true && accounts[i].status == 1) {
 				accounts[i].login = false;
 				session->login = false;
-				session->username = "";
+				session->username[0] = 0;
 				response.opcode = SUCCESS;
 				break;
 			}
@@ -311,12 +389,13 @@ Message practice(Message message, Session *session) {
 Message get_info_room(Message message, Session *session) {
 	Message response;
 	response.opcode = SUCCESS;
-	string payload;
+	string payload = "";
 	for (int i = 0; i < rooms.size(); i++) {
+		string id = rooms[i].id;
 		string number_question = to_string(rooms[i].number_of_question);
 		string length_time = to_string(rooms[i].length_time);
 		string start_time = rooms[i].start_time;
-		payload.append(to_string(i + 1));
+		payload.append(id);
 		payload.append(A_DELIMITER);
 		payload.append(number_question);
 		payload.append(A_DELIMITER);
@@ -326,7 +405,6 @@ Message get_info_room(Message message, Session *session) {
 		payload.append(Q_DELIMITER);
 	}
 	response.payload = payload;
-	cout << "payload" << payload;
 	response.length = response.payload.length();
 
 	return response;
@@ -345,9 +423,21 @@ Message access_room(Message message, Session *session) {
 	ResponseCode resCode = BAD_REQUEST;
 	if (session->login)
 	{
-		int index_room = stoi(message.payload);
-		if (index_room >= 0 && index_room < rooms.size()) {
-			if (check_status_room(rooms[index_room])) {
+		string id_room = message.payload;
+		int index_room = get_room(id_room);
+		if (index_room >= 0) {
+			Room room = rooms[index_room];
+			if (check_status_room(room)) {
+				string payload; 
+				payload.append(room.id);
+				payload.append(A_DELIMITER);
+				payload.append(to_string(room.number_of_question));
+				payload.append(A_DELIMITER);
+				payload.append(to_string(room.length_time));
+				payload.append(A_DELIMITER);
+				payload.append(room.start_time);
+				response.payload = payload;
+				response.length = payload.length();
 				response.opcode = SUCCESS;
 			}
 			else {
@@ -362,11 +452,10 @@ Message access_room(Message message, Session *session) {
 	{
 		resCode = NO_LOGIN;
 	}
-	if(response.opcode != SUCCESS){
+	if (response.opcode != SUCCESS) {
 		response.payload = to_string(resCode);
 		response.length = response.payload.length();
 	}
-
 	return response;
 }
 
@@ -378,38 +467,46 @@ Message access_room(Message message, Session *session) {
 */
 Message get_question(Message message, Session *session) {
 	Message response;
-
 	if (session->login)
 	{
-		response.opcode = SUCCESS;
-		string payload;
-		for (int i = 0; i < QUESTION_SIZE; i++) {
-			string id = to_string(questions[i].id);
-			string question = questions[i].question;
-			string options;
-			options.append(questions[i].options[0]);
-			options.append(Q_DELIMITER);
-			options.append(questions[i].options[1]);
-			options.append(Q_DELIMITER);
-			options.append(questions[i].options[2]);
-			options.append(Q_DELIMITER);
-			options.append(questions[i].options[3]);
-			payload.append(id);
-			payload.append(Q_DELIMITER);
-			payload.append(question);
-			payload.append(Q_DELIMITER);
-			payload.append(options);
-			payload.append(A_DELIMITER);
+		string payload = "";
+		vector<string> info = split(message.payload, Q_DELIMITER);
+		int seek = stoi(info[0]);
+		string id_room = info[1];
+		if (id_room == PRACTICE) {
+			if (seek == 0) session->seek = random_index(questions.size());
+			for (int i = 0; i < QUESTION_SIZE; i++) {
+				if (seek + i >= QUESTION_SIZE_PRACTICE) break;
+				int index = (seek + session->seek + i) % questions.size();
+				payload.append(decode_question(questions[index]));
+			}
+			response.opcode = SUCCESS;
+			response.payload = payload;
+			response.length = response.payload.length();
+			return response;
 		}
-		response.payload = payload;
-		response.length = response.payload.length();
-	}
-	else
-	{
+		int index_room = get_room(id_room);
+		
+		if (index_room >= 0) {
+			Room room = rooms[index_room];
+			if (room.questions.size() == 0) load_question(room);
+			int max_question = min(seek + QUESTION_SIZE, room.number_of_question);
+			for (int i = seek; i < max_question; i++) {
+				payload.append(decode_question(room.questions[i]));
+			}
+			response.opcode = SUCCESS;
+			response.payload = payload;
+			response.length = response.payload.length();
+			return response;
+		}
 		response.opcode = ERROR_CODE;
-		response.payload = to_string(NO_LOGIN);
+		response.payload = to_string(ROOM_NO_EXIST);
 		response.length = response.payload.length();
+		return response;
 	}
+	response.opcode = ERROR_CODE;
+	response.payload = to_string(NO_LOGIN);
+	response.length = response.payload.length();
 	return response;
 }
 
@@ -505,11 +602,11 @@ int Receive(SOCKET s, char *buff, int flags, Session *session) {
 			if (session->login) {
 				int number_accounts = accounts.size();
 				for (int j = 0; j < number_accounts; j++) {
-					if (accounts[j].username == session->username)
+					if (accounts[j].username == convertToString(session->username, strlen(session->username)))
 					{
 						accounts[j].login = false;
 						session->login = false;
-						session->username = "";
+						session->username[0] = 0;
 						break;
 					}
 				}

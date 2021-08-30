@@ -16,11 +16,12 @@ struct Question {
 	string answer;
 }; 
 
-typedef struct Room {
+struct Room {
+	string id;
 	int number_of_question;
 	int length_time;
-	long long start_time;
-} Room;
+	string start_time;
+};
 
 time_t to_time_t(const string& timestamp){
 	tm tm{};

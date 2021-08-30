@@ -49,12 +49,12 @@ int main(int argc, char *argv[])
 	}
 
 	printf("Server started!\n");
-
+	srand(time(NULL));
 	// Load database
 	SOCKET client[FD_SETSIZE], connSock;
 	fd_set readfds, initfds; //use initfds to initiate readfds at the begining of every loop step
 	sockaddr_in clientAddr;
-	Session sessions[FD_SETSIZE];
+	Session* sessions[FD_SETSIZE];
 	
 	int nEvents, clientAddrLen = sizeof(clientAddr), clientPort, ret;
 	char buff[BUFF_SIZE], clientIP[INET_ADDRSTRLEN];
@@ -92,7 +92,18 @@ int main(int argc, char *argv[])
 					if (client[i] == 0) {
 						client[i] = connSock;
 						FD_SET(client[i], &initfds);
-						Session session = { connSock, clientAddr, "", false };
+						char clientIP[INET_ADDRSTRLEN];
+						inet_ntop(AF_INET, &clientAddr.sin_addr, clientIP, sizeof(clientIP));
+						int clientPort = ntohs(clientAddr.sin_port);
+						Session* session = (Session*)malloc(sizeof(Session));
+						strcpy_s(session->clientIP, INET_ADDRSTRLEN, clientIP);
+						session->clientPort = clientPort;
+						session->s = connSock;
+						session->addr = clientAddr;
+						session->login = false;
+						session->username[0] = 0;
+						session->seek = 0;
+
 						sessions[i] = session;
 						break;
 					}
@@ -113,19 +124,16 @@ int main(int argc, char *argv[])
 				continue;
 
 			if (FD_ISSET(client[i], &readfds)) {
-				ret = Receive(client[i], buff, 0, &sessions[i]);
-				cout << "----------\n";
-				cout << buff << endl;
-				cout << "----------\n";
+				ret = Receive(client[i], buff, 0, sessions[i]);
 				if (ret <= 0 ) {
 					FD_CLR(client[i], &initfds);
 					closesocket(client[i]);
 					client[i] = 0;
-					sessions[i] = {};
+					sessions[i] = nullptr;
 				}
 				else {
 					msgRecv = decodeMessage(buff);
-					msgRes = handleMessage(msgRecv, &sessions[i]);
+					msgRes = handleMessage(msgRecv, sessions[i]);
 					encodeMessage(msgRes, buff);
 					Send(client[i], buff, 0);
 				}

@@ -6,7 +6,7 @@
 #include "string"
 #include "vector"
 #include "time.h"
-#define BUFF_SIZE 2048 // 2 MB
+#define BUFF_SIZE 2048 // 2 KB
 using namespace std;
 
 string Q_DELIMITER = "#%#";
@@ -14,8 +14,25 @@ string A_DELIMITER = "$%$";
 string SPACE_DELIMITER = " ";
 string R_DELIMITER = "&%&";
 
+string PRACTICE = "PRACTICE";
+
 int QUESTION_SIZE = 4;
 int QUESTION_SIZE_PRACTICE = 4;
+
+struct Question {
+	int id;
+	string question;
+	string options[4];
+	string answer;
+};
+
+struct Room {
+	string id;
+	int number_of_question;
+	vector<Question> questions; //lazy
+	int length_time;
+	string start_time;
+};
 
 enum ResponseCode {
 	SUCCESS = 0,
@@ -45,13 +62,6 @@ struct Message {
 	int opcode;
 	int length;
 	string payload;
-};
-
-struct Question {
-	int id;
-	string question;
-	string options[4];
-	string answer;
 };
 
 struct Account {

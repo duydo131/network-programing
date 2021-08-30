@@ -9,6 +9,8 @@
 #include "Client_utils.h"
 #include "Client_module.h"
 
+#include "process.h"
+
 using namespace std;
 
 #define BUFF_SIZE 2048
@@ -18,7 +20,13 @@ string result = "";
 
 SOCKET client;
 char buff[BUFF_SIZE];
-int ret, size_room = INT_MAX;
+int ret, seek = 0;
+Room room;
+string user = "";
+boolean flag = false, done = false;
+vector<Room> info_room;
+
+CRITICAL_SECTION critical;
 
 void process_signup();
 void process_signin();
@@ -29,6 +37,17 @@ void process_get_info_room();
 void process_access_room();
 void process_get_result();
 void process_setup_room();
+int get_question(int);
+
+unsigned __stdcall echoThread(void *param) {
+	Time* input = (Time*)param;
+	Sleep(input->second);
+
+	EnterCriticalSection(&critical);
+	
+	LeaveCriticalSection(&critical);
+	return 0;
+}
 
 int menu() {
 	char choice[100];
@@ -36,6 +55,7 @@ int menu() {
 	while (true)
 	{
 		printf("------------------------- MENU -------------------------\n");
+		if (flag) cout << "             Welcome " << user << endl;
 		printf("1. Sign Up\n");
 		printf("2. Sign In\n");
 		printf("3. Sign Out\n");
@@ -59,19 +79,24 @@ int menu() {
 }
 
 void show_info_room(string info) {
+	system("CLS");
+	if (info == "") {
+		cout << "No Rooms Available!!!!!\n";
+		return;
+	}
 	vector<string> payloads = split(info, Q_DELIMITER);
-	size_room = payloads.size() - 1;
 	for (int j = 0; j < payloads.size() - 1; j++) {
 		vector<string> room_info = split(payloads[j], A_DELIMITER);
-		cout << "Room " << room_info[0] << endl;
+		cout << (j + 1) << ". Room ID: " << room_info[0] << endl;
 		cout << "\tNumber of question : " << room_info[1] << endl;
 		cout << "\tLengh time : " << room_info[2] << endl;
 		cout << "\tStart time : " << formatTime(room_info[3]) << endl << endl;
 	}
 }
+
 void show_questions(string payload) {
+	system("CLS");
 	vector<string> payloads = split(payload, A_DELIMITER);
-	result = "";
 	for (int j = 0; j < payloads.size() - 1; j++) {
 		vector<string> question = split(payloads[j], Q_DELIMITER);
 		cout << "ID " << question[0] << ":" <<  question[1] << endl;
@@ -79,7 +104,7 @@ void show_questions(string payload) {
 		cout << question[3] << endl;// B
 		cout << question[4] << endl;// C
 		cout << question[5] << endl;// D
-		
+		seek++;
 		string in;
 		while (true) {
 			cout << "\nChoose 1 answer : ";
@@ -96,6 +121,57 @@ void show_result(string payload) {
 	cout << "Result: " << endl;
 	cout << "Right: " << rs[0] << endl;
 	cout << "Wrong: " << rs[1] << endl;
+}
+
+void save_info_room(string payload) {system("CLS");
+	info_room.clear();
+	vector<string> payloads = split(payload, Q_DELIMITER);
+	for (int j = 0; j < payloads.size() - 1; j++) {
+		vector<string> info = split(payloads[j], A_DELIMITER);
+		Room r;
+		r.id = info[0];
+		r.number_of_question = stoi(info[1]);
+		r.length_time = stoi(info[2]);
+		r.start_time = info[3];
+		info_room.push_back(r);
+	}
+}
+
+void get_info_room(bool flag) {
+	Message message;
+	message.opcode = 9;
+	message.length = 0;
+	message.payload = "";
+
+	encodeMessage(message, buff);
+	// send message to server
+	ret = Send(client, buff, 0);
+
+	// receive message from server
+	ret = Receive(client, buff, 0);
+	message = decodeMessage(buff);
+	if (message.opcode == SUCCESS) {
+		if (flag) show_info_room(message.payload);
+		save_info_room(message.payload);
+	}
+	else {
+		switch (stoi(message.payload))
+		{
+		case NO_LOGIN:
+			cout << "You are not logged in!!";
+			break;
+		default:
+			cout << "Error Server";
+		}
+	}
+}
+
+void save_room(string payload) {
+	vector<string> info = split(payload, A_DELIMITER);
+	room.id = info[0];
+	room.number_of_question = stoi(info[1]);
+	room.length_time = stoi(info[2]);
+	room.start_time = info[3];
 }
 
 int main(int argc, char* argv[]) {
@@ -133,7 +209,7 @@ int main(int argc, char* argv[]) {
 		printf("Error %d Cannot connect server.\n", WSAGetLastError());
 		return 0;
 	}
-
+	system("CLS");
 	// comunicate with server
 	while (1) {
 
@@ -265,7 +341,11 @@ void process_signin() {
 	// receive message from server
 	ret = Receive(client, buff, 0);
 	message = decodeMessage(buff);
-	if (message.opcode == SUCCESS) cout << "Login Success!!";
+	if (message.opcode == SUCCESS) {
+		cout << "Login Success!!";
+		user = username;
+		flag = true;
+	}
 	else {
 		switch (stoi(message.payload))
 		{
@@ -303,7 +383,10 @@ void process_signout() {
 	// receive message from server
 	ret = Receive(client, buff, 0);
 	message = decodeMessage(buff);
-	if (message.opcode == SUCCESS) cout << "Logout Success!!";
+	if (message.opcode == SUCCESS) {
+		cout << "Logout Success!!";
+		flag = false;
+	}
 	else {
 		switch (stoi(message.payload))
 		{
@@ -333,6 +416,7 @@ void process_practice() {
 	ret = Receive(client, buff, 0);
 	message = decodeMessage(buff);
 	if (message.opcode == SUCCESS) {
+		room.id = PRACTICE;
 		process_get_question();
 	}
 	else {
@@ -350,11 +434,13 @@ void process_practice() {
 	system("CLS");
 };
 
-void process_get_question() {
+int get_question(int seek) {
 	Message message;
 	message.opcode = 6;
-	message.length = 0;
-	message.payload = "";
+	
+	string payload = to_string(seek) + Q_DELIMITER + room.id;
+	message.payload = payload;
+	message.length = payload.length();
 
 	encodeMessage(message, buff);
 	// send message to server
@@ -365,8 +451,6 @@ void process_get_question() {
 	message = decodeMessage(buff);
 	if (message.opcode == SUCCESS) {
 		show_questions(message.payload);
-		result = result.substr(0, result.length() - A_DELIMITER.length());
-		process_get_result();
 	}
 	else {
 		switch (stoi(message.payload))
@@ -374,58 +458,78 @@ void process_get_question() {
 		case NO_LOGIN:
 			cout << "You are not logged in!!";
 			break;
+		case ROOM_NO_EXIST:
+			cout << "Room not exists!!\n";
+			break;
 		default:
 			cout << "Error Server";
 		}
+		return -1;
 	}
+	return 1;
+}
+
+void process_get_question() {
+	result = "";
+	seek = 0;
+	int ret;
+	if(room.id == NOT_ACCESS_ROOM) cout << "NOT ACCESS ROOM!!!!!!\n";
+	else{
+		if (room.id == PRACTICE) {
+			while (true) {
+				ret = get_question(seek);
+				if (ret < 0) {
+					cout << "Error Server!! Try again!!\n";
+					return;
+				}
+				if (seek >= QUESTION_SIZE_PRACTICE) break;
+			}
+		}
+		else {
+			while (true) {
+				ret = get_question(seek); 
+				if (ret < 0) {
+					cout << "Error Server!! Try again!!\n";
+					return;
+				}
+				if (seek >= room.number_of_question) break;
+			}
+		}
+		result = result.substr(0, result.length() - A_DELIMITER.length());
+		process_get_result();
+		room.id = PRACTICE;
+	}	
 };
 
 void process_get_info_room() {
-	Message message;
-	message.opcode = 9;
-	message.length = 0;
-	message.payload = "";
-
-	encodeMessage(message, buff);
-	// send message to server
-	ret = Send(client, buff, 0);
-
-	// receive message from server
-	ret = Receive(client, buff, 0);
-	message = decodeMessage(buff);
-	if (message.opcode == SUCCESS) {
-		show_info_room(message.payload);
-	}
-	else {
-		switch (stoi(message.payload))
-		{
-		case NO_LOGIN:
-			cout << "You are not logged in!!";
-			break;
-		default:
-			cout << "Error Server";
-		}
-	}
+	get_info_room(true);
 	cout << "\nPress key to continue!!\n";
 	_getch();
 	system("CLS");
 };
 
 void process_access_room() {
+	get_info_room(false);
 	Message message;
 	message.opcode = 10;
 	string payload;
-	int room;
+	int index_room;
 
 	cout << "Access room\n";
-	room = get_line("Enter room", 1, size_room);
-	payload = to_string(room - 1);
+	if (info_room.size() <= 0) {
+		cout << "No Rooms Available!!!!!\n";
+		cout << "\nPress key to continue!!\n";
+		_getch();
+		system("CLS");
+		return;
+	}
+	index_room = get_line("Enter room", 1, info_room.size());
+	payload = info_room[index_room - 1].id;
 
 	message.length = payload.size();
 	message.payload = payload;
 
 	encodeMessage(message, buff);
-	cout << buff << endl;
 	// send message to server
 	ret = Send(client, buff, 0);
 
@@ -433,6 +537,7 @@ void process_access_room() {
 	ret = Receive(client, buff, 0);
 	message = decodeMessage(buff);
 	if (message.opcode == SUCCESS) {
+		save_room(message.payload);
 		process_get_question();
 	}
 	else {
