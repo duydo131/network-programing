@@ -19,6 +19,11 @@ string PRACTICE = "PRACTICE";
 int QUESTION_SIZE = 4;
 int QUESTION_SIZE_PRACTICE = 4;
 
+string ACCOUNTS_PATH = "accounts.txt";
+string QUESTIONS_PATH = "questions.txt";
+string ROOMS_PATH = "rooms.txt";
+string FILE_LOG = "log_13.txt";
+
 struct Question {
 	int id;
 	string question;
@@ -161,6 +166,30 @@ vector<Question> getAllQuestions(string questions_path) {
 }
 
 /*
+* Function to get all rooms in database
+* @returns list of room in database
+*/
+vector<Room> getAllRooms(string rooms_path) {
+	vector<Room> rooms;
+	string line;
+	ifstream file(rooms_path);
+	while (!file.eof())
+	{
+		getline(file, line);
+		if (line == "") continue;
+		Room room;
+		vector<string> data = split(line, SPACE_DELIMITER);
+		room.id = data[0];
+		room.number_of_question = stoi(data[1]);
+		room.length_time = stoi(data[2]);
+		room.start_time = data[3];
+		rooms.push_back(room);
+	}
+	file.close();
+	return rooms;
+}
+
+/*
 * Function to encode questions
 * @param questions: [IN] List questions for encode
 * @returns output string of encode list question
@@ -229,4 +258,44 @@ Message decodeMessage(char *buff) {
 	message.length = stoi(data[1]);
 	message.payload = data[2];
 	return message;
+}
+
+
+/*	Write File
+input :
+char* filename
+char[] data to write
+*/
+void log(string fileLog, char data[]) {
+	ofstream ofs(fileLog, ofstream::app);
+
+	ofs << data << endl;
+}
+
+/*	Get pre_log include clientIP and clientPort
+input :
+char[] clientIP
+int clientPort
+output : char* valid form
+*/
+char* get_pre_log(char clientIP[], int clientPort) {
+	int size = 16;
+	char* pre_log = (char*)malloc(size);
+	sprintf_s(pre_log, size, "%s:%d", clientIP, clientPort);
+	return pre_log;
+}
+
+/*	Change time to valid format
+input : time_t
+output : char* valid form [dd/mm/yyyy hh:mm:ss]
+*/
+char* get_time_request(time_t t) {
+	int size = 22;
+	char* time_request = (char*)malloc(size);
+	tm ltm;
+	localtime_s(&ltm, &t);
+	sprintf_s(time_request, size, "[%02d/%02d/%04d %02d:%02d:%02d]",
+		ltm.tm_mday, ltm.tm_mon + 1, ltm.tm_year + 1900,
+		ltm.tm_hour, ltm.tm_min, ltm.tm_sec);
+	return time_request;
 }

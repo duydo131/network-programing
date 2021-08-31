@@ -8,40 +8,8 @@
 #include "ws2tcpip.h"
 #include "winsock2.h"
 #include "list"
-#include <stdlib.h>     /* srand, rand */
+#include <stdlib.h>
 using namespace std;
-
-/*
-* Function to get all rooms in database
-* @returns list of room in database
-*/
-vector<Room> getAllRooms(string rooms_path) {
-	vector<Room> rooms;
-	string line;
-	ifstream file(rooms_path);
-	while (!file.eof())
-	{
-		getline(file, line);
-		if (line == "") continue;
-		Room room;
-		vector<string> data = split(line, SPACE_DELIMITER);
-		room.id = data[0];
-		room.number_of_question = stoi(data[1]);
-		room.length_time = stoi(data[2]);
-		room.start_time = data[3];
-		rooms.push_back(room);
-	}
-	file.close();
-	return rooms;
-}
-
-string ACCOUNTS_PATH = "accounts.txt";
-string QUESTIONS_PATH = "questions.txt";
-string ROOMS_PATH = "rooms.txt";
-
-vector<Account> accounts = getAllAccounts(ACCOUNTS_PATH);
-vector<Question> questions = getAllQuestions(QUESTIONS_PATH);
-vector<Room> rooms = getAllRooms(ROOMS_PATH);
 
 struct Session {
 	SOCKET s;
@@ -52,6 +20,10 @@ struct Session {
 	int clientPort;
 	int seek;
 };
+
+vector<Account> accounts = getAllAccounts(ACCOUNTS_PATH);
+vector<Question> questions = getAllQuestions(QUESTIONS_PATH);
+vector<Room> rooms = getAllRooms(ROOMS_PATH);
 
 time_t to_time_t(const string& timestamp) // throws on bad timestamp
 {
@@ -86,6 +58,27 @@ bool checkAccountExist(string username) {
 }
 
 // ------------
+void log_activity(Session* session, char* request, Message response, string filename, time_t now) {
+	string res = "";
+	if (response.opcode == SUCCESS) res += to_string(SUCCESS);
+	else res += to_string(ERROR_CODE) + " " + response.payload;
+
+	// define pre_log "ClientIP:ClientPort"
+	char* pre_log = get_pre_log(session->clientIP, session->clientPort);
+
+	// define pre_log "[dd/mm/yyyy hh:mm:ss]"
+	char* time_request = get_time_request(now);
+
+	char log_data[128];
+	sprintf_s(log_data, "%s %s $ %s $ %s", pre_log, time_request, request, res.c_str());
+
+	// log 
+	log(filename, log_data);
+
+	free(time_request);
+	free(pre_log);
+}
+
 string decode_question(Question q) {
 	string payload = "";
 	string id = to_string(q.id);
@@ -128,15 +121,33 @@ int get_room(string id) {
 	return -1;
 }
 
-string generate_id(Session* session) {
-	time_t seconds = time(NULL);
-	char id[100];
-	sprintf_s(id, 100, "%s%d%ld", session->clientIP, session->clientPort, (long)seconds);
-	return convertToString(id, strlen(id));
-}
-
 int inline random_index(int max) {
 	return rand() % max;
+}
+
+int random_range(int min, int max) {
+	if (max <= min) return max;
+	return rand() % (max - min) + min;
+}
+
+char* format_client_IP(char* clientIP) {
+	int length = strlen(clientIP);
+	char* out = (char*)malloc(length + 1);
+	for (int i = 0; i < length; i++) {
+		if (*(clientIP + i) == '.') out[i] = random_index(9) + 48;
+		else out[i] = *(clientIP + i);
+	}
+	out[length] = 0;
+	return out;
+}
+
+string generate_id(Session* session) {
+	time_t seconds = time(NULL);
+	char id[50];
+	char* IP = format_client_IP(session->clientIP);
+	sprintf_s(id, 50, "%d%s%d%ld", random_range(10000, 99999), IP, session->clientPort, (long)seconds);
+	free(IP);
+	return convertToString(id, strlen(id));
 }
 
 vector<int> random_question(int number_of_question) {
@@ -227,9 +238,8 @@ Message process_setup_room(Message message, Session *session) {
 			rooms.push_back(room);
 			response.opcode = SUCCESS;
 		}
-		catch (exception &ex) {
-			// pass
-		}
+		catch (int ex) {}
+		catch (exception &ex) {}
 	}
 	return response;
 }

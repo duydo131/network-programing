@@ -9,8 +9,6 @@
 #include "Client_utils.h"
 #include "Client_module.h"
 
-#include "process.h"
-
 using namespace std;
 
 #define BUFF_SIZE 2048
@@ -26,8 +24,6 @@ string user = "";
 boolean flag = false, done = false;
 vector<Room> info_room;
 
-CRITICAL_SECTION critical;
-
 void process_signup();
 void process_signin();
 void process_signout();
@@ -38,16 +34,6 @@ void process_access_room();
 void process_get_result();
 void process_setup_room();
 int get_question(int);
-
-unsigned __stdcall echoThread(void *param) {
-	Time* input = (Time*)param;
-	Sleep(input->second);
-
-	EnterCriticalSection(&critical);
-	
-	LeaveCriticalSection(&critical);
-	return 0;
-}
 
 int menu() {
 	char choice[100];
@@ -123,7 +109,7 @@ void show_result(string payload) {
 	cout << "Wrong: " << rs[1] << endl;
 }
 
-void save_info_room(string payload) {system("CLS");
+void save_info_room(string payload) {
 	info_room.clear();
 	vector<string> payloads = split(payload, Q_DELIMITER);
 	for (int j = 0; j < payloads.size() - 1; j++) {
@@ -137,7 +123,7 @@ void save_info_room(string payload) {system("CLS");
 	}
 }
 
-void get_info_room(bool flag) {
+void get_info_room(bool f) {
 	Message message;
 	message.opcode = 9;
 	message.length = 0;
@@ -151,7 +137,7 @@ void get_info_room(bool flag) {
 	ret = Receive(client, buff, 0);
 	message = decodeMessage(buff);
 	if (message.opcode == SUCCESS) {
-		if (flag) show_info_room(message.payload);
+		if (f) show_info_room(message.payload);
 		save_info_room(message.payload);
 	}
 	else {

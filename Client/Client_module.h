@@ -70,10 +70,17 @@ int get_line(string description, int min = 0, int max = INT_MAX) {
 			cout << description + " : ";
 			getline(cin, in);
 			out = stoi(in);
+			cout << out << endl;
 			if (out < min || out > max) throw 1;
 			return out;
 		}
-		catch (exception &err) {
+		catch (int i) {
+			cout << description + " not valid!!!\n";
+			cout << "Press key to continue!!\n";
+			_getch();
+			system("CLS");
+		}
+		catch (exception ex) {
 			cout << description + " not valid!!!\n";
 			cout << "Press key to continue!!\n";
 			_getch();
@@ -102,6 +109,12 @@ string get_start_time() {
 			string out = to_string(year) + format_form_date(month) + format_form_date(day)
 				+ format_form_date(hour) + format_form_date(minute) + format_form_date(second);
 			return out;
+		}
+		catch (int ex) {
+			cout << "Invalid Date!!!\n";
+			cout << "Press key to continue!!\n";
+			_getch();
+			system("CLS");
 		}
 		catch (exception &ex) {
 			cout << "Invalid Date!!!\n";

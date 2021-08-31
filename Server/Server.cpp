@@ -132,8 +132,10 @@ int main(int argc, char *argv[])
 					sessions[i] = nullptr;
 				}
 				else {
+					time_t now = time(0);
 					msgRecv = decodeMessage(buff);
 					msgRes = handleMessage(msgRecv, sessions[i]);
+					log_activity(sessions[i], buff, msgRes, FILE_LOG, now);
 					encodeMessage(msgRes, buff);
 					Send(client[i], buff, 0);
 				}
