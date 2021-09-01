@@ -279,7 +279,7 @@ int clientPort
 output : char* valid form
 */
 char* get_pre_log(char clientIP[], int clientPort) {
-	int size = 16;
+	int size = 22;
 	char* pre_log = (char*)malloc(size);
 	sprintf_s(pre_log, size, "%s:%d", clientIP, clientPort);
 	return pre_log;

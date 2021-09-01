@@ -19,6 +19,7 @@ struct Session {
 	char clientIP[INET_ADDRSTRLEN];
 	int clientPort;
 	int seek;
+	Account* account = nullptr;
 };
 
 vector<Account> accounts = getAllAccounts(ACCOUNTS_PATH);
@@ -309,6 +310,7 @@ Message login(Message message, Session *session) {
 						session->login = true;
 						strcpy_s(session->username, account.username.length() + 1, account.username.c_str());
 						response.opcode = SUCCESS;
+						session->account = &accounts[i];
 					}
 				}
 				else {

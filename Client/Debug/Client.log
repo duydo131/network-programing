@@ -1,4 +1,5 @@
-﻿  Client.cpp
+﻿  stdafx.cpp
+  Client.cpp
 d:\20202\program\network programing\project\client\client_module.h(77): warning C4101: 'i': unreferenced local variable
 d:\20202\program\network programing\project\client\client_module.h(113): warning C4101: 'ex': unreferenced local variable
 d:\20202\program\network programing\project\client\client_module.h(119): warning C4101: 'ex': unreferenced local variable
