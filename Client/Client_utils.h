@@ -100,7 +100,8 @@ void encodeMessage(Message message, char *buff) {
 	str += to_string(message.length);
 	str += SPACE_DELIMITER;
 	str.append(message.payload);
-	memcpy(buff, &str[0], BUFF_SIZE);
+	memcpy(buff, &str[0], str.length());
+	*(buff + str.length()) = 0;
 }
 
 /*

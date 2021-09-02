@@ -256,8 +256,49 @@ Message decodeMessage(char *buff) {
 	Message message;
 	message.opcode = stoi(data[0]);
 	message.length = stoi(data[1]);
-	message.payload = data[2];
+	message.payload = data[2].substr(0, message.length);
 	return message;
+}
+
+vector<Message> decode_messages(char *buff) {
+	string msg = convertToString(buff, strlen(buff));
+	vector<string> data = split(msg, SPACE_DELIMITER);
+	vector<Message> out;
+	int id = 0, length = data.size();
+	if (data[length - 1] == "") length--;
+	while (id < length) {
+		Message message;
+		message.opcode = stoi(data[id++]);
+		message.length = stoi(data[id++]);
+		if (message.length > 0) {
+			message.payload = data[id++].substr(0, message.length);
+		}
+		out.push_back(message);
+	}
+	return out;
+}
+
+int encode_message(Message message, char *buff) {
+	string str = "";
+	str += to_string(message.opcode);
+	str += SPACE_DELIMITER;
+	str += to_string(message.length);
+	if (message.length > 0) {
+		str += SPACE_DELIMITER;
+		str.append(message.payload);
+	}
+	memcpy(buff, &str[0], str.length());
+	return str.length();
+}
+
+void encode_messages(vector<Message> in, char* buff) {
+	int position = 0, add;
+	for (Message message : in) {
+		add = encode_message(message, buff + position);
+		position += add;
+		buff[position++] = ' ';
+	}
+	buff[position - 1] = 0;
 }
 
 
@@ -278,10 +319,10 @@ char[] clientIP
 int clientPort
 output : char* valid form
 */
-char* get_pre_log(char clientIP[], int clientPort) {
+char* get_pre_log(char clientIP[], int socket) {
 	int size = 22;
 	char* pre_log = (char*)malloc(size);
-	sprintf_s(pre_log, size, "%s:%d", clientIP, clientPort);
+	sprintf_s(pre_log, size, "%s:%d", clientIP, socket);
 	return pre_log;
 }
 

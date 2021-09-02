@@ -199,14 +199,17 @@ unsigned __stdcall serverWorkerThread(LPVOID completionPortID)
 			perIoData->recvBytes = transferredBytes;
 			perIoData->sentBytes = 0;
 			perIoData->operation = SEND;
+			perIoData->dataBuff.buf[transferredBytes] = 0;
 
 			time_t now = time(0);
-			Message msgRecv = decodeMessage(perIoData->dataBuff.buf);
-
-			Message msgRes = handleMessage(msgRecv, perIoData->session);
-			log_activity(perIoData->session, perIoData->dataBuff.buf, msgRes, FILE_LOG, now);
-			encodeMessage(msgRes, buff);
-
+			vector<Message> msgRecvs = decode_messages(perIoData->dataBuff.buf);
+			vector<Message> msgReses;
+			for (Message msgRecv : msgRecvs) {
+				Message msgRes = handleMessage(msgRecv, perIoData->session);
+				msgReses.push_back(msgRes);
+				log_activity(perIoData->session, perIoData->dataBuff.buf, msgRes, FILE_LOG, now);
+			}
+			encode_messages(msgReses, buff);
 			perIoData->dataBuff.buf = buff;
 			perIoData->dataBuff.len = strlen(buff);
 			perIoData->length = strlen(buff);
