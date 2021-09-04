@@ -7,5 +7,6 @@ d:\20202\program\network programing\project\client\client_module.h(180): warning
 d:\20202\program\network programing\project\client\client.cpp(74): warning C4018: '<': signed/unsigned mismatch
 d:\20202\program\network programing\project\client\client.cpp(86): warning C4018: '<': signed/unsigned mismatch
 d:\20202\program\network programing\project\client\client.cpp(115): warning C4018: '<': signed/unsigned mismatch
+  LINK : D:\20202\program\network programing\Project\Debug\Client.exe not found or not built by the last incremental link; performing full link
   Client.vcxproj -> D:\20202\program\network programing\Project\Debug\Client.exe
   Client.vcxproj -> D:\20202\program\network programing\Project\Debug\Client.pdb (Full PDB)

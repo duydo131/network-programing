@@ -238,6 +238,7 @@ Message process_setup_room(Message message, Session *session) {
 			if (res < 0) throw 1;
 			rooms.push_back(room);
 			response.opcode = SUCCESS;
+			response.length = 0;
 		}
 		catch (int ex) {}
 		catch (exception &ex) {}
@@ -252,7 +253,6 @@ Message process_setup_room(Message message, Session *session) {
 */
 Message registry(Message message) {
 	Message response;
-
 	Account account;
 	vector<string> data = split(message.payload, Q_DELIMITER);
 	account.username = data[0];
@@ -264,14 +264,16 @@ Message registry(Message message) {
 		saveAccount(account, ACCOUNTS_PATH);
 		accounts.push_back(account);
 		response.opcode = SUCCESS;
+		response.length = 0;
 	}
 	else {
 		response.opcode = ERROR_CODE;
 		resCode = ACCOUNT_EXISTED;
 	}
-
-	response.payload = to_string(resCode);
-	response.length = response.payload.length();
+	if (response.opcode != SUCCESS) {
+		response.payload = to_string(resCode);
+		response.length = response.payload.length();
+	}
 
 	return response;
 }
@@ -309,7 +311,8 @@ Message login(Message message, Session *session) {
 						accounts[i].login = true;
 						session->login = true;
 						strcpy_s(session->username, account.username.length() + 1, account.username.c_str());
-						response.opcode = SUCCESS;
+						response.opcode = SUCCESS; 
+						response.length = 0;
 						session->account = &accounts[i];
 					}
 				}
@@ -349,6 +352,7 @@ Message logout(Message message, Session *session) {
 				session->login = false;
 				session->username[0] = 0;
 				response.opcode = SUCCESS;
+				response.length = 0;
 				break;
 			}
 		}
@@ -378,7 +382,8 @@ Message practice(Message message, Session *session) {
 
 	if (session->login)
 	{
-		response.opcode = SUCCESS;
+		response.opcode = SUCCESS; 
+		response.length = 0;
 	}
 	else
 	{

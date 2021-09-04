@@ -138,6 +138,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		session->login = false;
 		session->username[0] = 0;
 		session->seek = 0;
+		session->account = nullptr;
 
 		ZeroMemory(&(perIoData->overlapped), sizeof(OVERLAPPED));
 		perIoData->sentBytes = 0;
@@ -172,7 +173,7 @@ unsigned __stdcall serverWorkerThread(LPVOID completionPortID)
 			(LPDWORD)&perHandleData, (LPOVERLAPPED *)&perIoData, INFINITE) == 0) {
 			printf("Closing socket %d\n", perHandleData->socket);
 			GlobalFree(perHandleData);
-			if(perIoData->session->account != nullptr) perIoData->session->account->login = false;
+			if (perIoData->session->account != nullptr) perIoData->session->account->login = false;
 			free(perIoData->session);
 			GlobalFree(perIoData);
 			continue;
@@ -202,6 +203,7 @@ unsigned __stdcall serverWorkerThread(LPVOID completionPortID)
 			perIoData->dataBuff.buf[transferredBytes] = 0;
 
 			time_t now = time(0);
+			printf("client: %s\n", perIoData->dataBuff.buf);
 			vector<Message> msgRecvs = decode_messages(perIoData->dataBuff.buf);
 			vector<Message> msgReses;
 			for (Message msgRecv : msgRecvs) {
@@ -210,6 +212,7 @@ unsigned __stdcall serverWorkerThread(LPVOID completionPortID)
 				log_activity(perIoData->session, perIoData->dataBuff.buf, msgRes, FILE_LOG, now);
 			}
 			encode_messages(msgReses, buff);
+			printf("server: %s\n", buff);
 			perIoData->dataBuff.buf = buff;
 			perIoData->dataBuff.len = strlen(buff);
 			perIoData->length = strlen(buff);

@@ -607,8 +607,11 @@ void process_setup_room() {
 	else {
 		switch (stoi(message.payload))
 		{
-		case ERROR_RESULT:
-			cout << "Bad request";
+		case NO_LOGIN:
+			cout << "You are not logged in!!";
+			break;
+		case ERROR_SETUP_ROOM:
+			cout << "Error Server";
 			break;
 		default:
 			cout << "Error Server";
