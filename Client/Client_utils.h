@@ -11,11 +11,10 @@ string Q_DELIMITER = "#%#";
 string A_DELIMITER = "$%$";
 string SPACE_DELIMITER = " ";
 string R_DELIMITER = "&%&";
+string M_DELIMITER = "%$%";
 
 string PRACTICE = "PRACTICE";
 string NOT_ACCESS_ROOM = "ERROR";
-
-int QUESTION_SIZE_PRACTICE = 4;
 
 enum ResponseCode {
 	SUCCESS = 0,

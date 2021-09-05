@@ -39,21 +39,19 @@ int comparetime(time_t time1, time_t time2) {
 	return difftime(time1, time2) > 0.0 ? 1 : -1;
 }
 
-bool check_start_time(string time) {
-	string const timestamp = time;
+bool check_start_time(string t) {
+	string const timestamp = t;
 	time_t start_time = to_time_t(timestamp);
-	time_t now = time_t(0);
+	time_t now = time(0);
 	int i = comparetime(now, start_time);
 	return i < 0;
 }
 
-bool is_leap(int year)
-{
+bool is_leap(int year){
 	return (((year % 4 == 0) && (year % 100 != 0)) || (year % 400 == 0));
 }
 
-bool is_valid_date(int d, int m, int y)
-{
+bool is_valid_date(int d, int m, int y){
 	if (y > 9999 || y < 1800) return false;
 	if (m < 1 || m > 12) return false;
 	if (d < 1 || d > 31) return false;
@@ -70,7 +68,6 @@ int get_line(string description, int min = 0, int max = INT_MAX) {
 			cout << description + " : ";
 			getline(cin, in);
 			out = stoi(in);
-			cout << out << endl;
 			if (out < min || out > max) throw 1;
 			return out;
 		}
@@ -94,6 +91,19 @@ string format_form_date(int i) {
 	return out.substr(out.length() - 2, 2);
 }
 
+string get_time(time_t time) {
+	struct tm ltm;
+	localtime_s(&ltm, &time);
+	string out = "";
+	out += to_string(1900 + ltm.tm_year);
+	out += format_form_date(1 + ltm.tm_mon);
+	out += format_form_date(ltm.tm_mday);
+	out += format_form_date(ltm.tm_hour);
+	out += format_form_date(ltm.tm_min);
+	out += format_form_date(ltm.tm_sec);
+	return out;
+}
+
 string get_start_time() {
 	int year, month, day, hour, minute, second;
 	while (true) {
@@ -108,6 +118,7 @@ string get_start_time() {
 			second = get_line("Second", 0, 59);
 			string out = to_string(year) + format_form_date(month) + format_form_date(day)
 				+ format_form_date(hour) + format_form_date(minute) + format_form_date(second);
+			if (!check_start_time(out)) throw 1;
 			return out;
 		}
 		catch (int ex) {

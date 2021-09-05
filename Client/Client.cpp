@@ -8,6 +8,9 @@
 #include <WS2tcpip.h>
 #include "Client_utils.h"
 #include "Client_module.h"
+#include "process.h"
+#include <future>
+#include <thread>
 
 using namespace std;
 
@@ -18,11 +21,12 @@ string result = "";
 
 SOCKET client;
 char buff[BUFF_SIZE];
-int ret, seek = 0;
+int ret, seek = 0, length_time_practice = 0, question_size_practice = 0;
 Room room;
-string user = "";
-boolean flag = false, done = false;
+string user = "", time_exam = "";
+boolean flag = false, done = false, show_question = true, fetch_question = true;
 vector<Room> info_room;
+future<void> compute_thread;
 
 void process_signup();
 void process_signin();
@@ -33,6 +37,7 @@ void process_get_info_room();
 void process_access_room();
 void process_get_result();
 void process_setup_room();
+void process_get_result_of_room();
 int get_question(int);
 
 int menu() {
@@ -49,12 +54,13 @@ int menu() {
 		printf("5. Get Info Room List\n");
 		printf("6. Access Room\n");
 		printf("7. Setup Room\n");
+		printf("8. Get Result Room\n");
 		printf("Enter your choice: ");
 		gets_s(choice, 100);
 
 		c = (int)(choice[0] - 48);
 
-		if (strlen(choice) > 1 || c < 1 || c > 7)
+		if (strlen(choice) > 1 || c < 1 || c > 8)
 		{
 			printf("Your choice is incorrect. Please, try again!\n");
 		}
@@ -62,6 +68,18 @@ int menu() {
 	}
 
 	return (int)(choice[0] - 48);
+}
+
+void fetch(int number_of_question) {
+	while (true && fetch_question) {
+		int ret = get_question(seek);
+		if (ret < 0) {
+			cout << "Error Server!! Try again!!\n";
+			return;
+		}
+		if (seek >= number_of_question) break;
+	}
+	return;
 }
 
 void show_info_room(string info) {
@@ -92,7 +110,7 @@ void show_questions(string payload) {
 		cout << question[5] << endl;// D
 		seek++;
 		string in;
-		while (true) {
+		while (show_question) {
 			cout << "\nChoose 1 answer : ";
 			getline(cin, in);
 			if (validate_result(in)) break;
@@ -105,8 +123,25 @@ void show_questions(string payload) {
 void show_result(string payload) {
 	vector<string> rs = split(payload, SPACE_DELIMITER);
 	cout << "Result: " << endl;
-	cout << "Right: " << rs[0] << endl;
+	cout << "Correct: " << rs[0] << endl;
 	cout << "Wrong: " << rs[1] << endl;
+}
+
+void show_info_result(string room_id, string data) {
+	cout << endl << "Room ID: " << room_id << endl;
+	string tab = "    ";
+	vector<string> results = split(data, A_DELIMITER);
+	if (results.size() <= 1) {
+		cout << "Room have not result" << endl;
+		return;
+	}
+	for (int j = 0; j < results.size() - 1; j++) {
+		vector<string> info = split(results[j], Q_DELIMITER);
+		cout << tab << "User: " << info[0] << endl;
+		cout << tab << tab << "Correct: " << info[1] << endl;
+		cout << tab << tab << "Wrong: " << info[2] << endl;
+		cout << tab << tab << "User: " << formatTime(info[3]) << endl << endl;
+	}
 }
 
 void save_info_room(string payload) {
@@ -234,6 +269,10 @@ int main(int argc, char* argv[]) {
 		case 7: {
 			process_setup_room();
 			break; 
+		}
+		case 8: {
+			process_get_result_of_room();
+			break;
 		}
 		default:
 			break;
@@ -403,6 +442,9 @@ void process_practice() {
 	message = decodeMessage(buff);
 	if (message.opcode == SUCCESS) {
 		room.id = PRACTICE;
+		vector<string> info = split(message.payload, A_DELIMITER);
+		length_time_practice = stoi(info[0]);
+		question_size_practice = stoi(info[1]);
 		process_get_question();
 	}
 	else {
@@ -445,7 +487,7 @@ int get_question(int seek) {
 			cout << "You are not logged in!!";
 			break;
 		case ROOM_NO_EXIST:
-			cout << "Room not exists!!\n";
+			cout << "Room not exist!!\n";
 			break;
 		default:
 			cout << "Error Server";
@@ -458,27 +500,30 @@ int get_question(int seek) {
 void process_get_question() {
 	result = "";
 	seek = 0;
+	time_exam = get_time(time(0));
+	show_question = true;
+	fetch_question = true;
 	int ret;
 	if(room.id == NOT_ACCESS_ROOM) cout << "NOT ACCESS ROOM!!!!!!\n";
 	else{
 		if (room.id == PRACTICE) {
-			while (true) {
-				ret = get_question(seek);
-				if (ret < 0) {
-					cout << "Error Server!! Try again!!\n";
-					return;
-				}
-				if (seek >= QUESTION_SIZE_PRACTICE) break;
+			auto timeToWait = chrono::system_clock::now() + chrono::milliseconds(length_time_practice * 1000);
+			compute_thread = async(fetch, question_size_practice);
+			future_status status = compute_thread.wait_until(timeToWait);
+			if (status != future_status::ready) {
+				cout << "\nOver!!!!\n";
+				show_question = false;
+				fetch_question = false;
 			}
 		}
 		else {
-			while (true) {
-				ret = get_question(seek); 
-				if (ret < 0) {
-					cout << "Error Server!! Try again!!\n";
-					return;
-				}
-				if (seek >= room.number_of_question) break;
+			auto timeToWait = chrono::system_clock::now() + chrono::milliseconds(room.length_time * 1000);
+			compute_thread = async(fetch, room.number_of_question);
+			future_status status = compute_thread.wait_until(timeToWait);
+			if (status != future_status::ready) {
+				cout << "\nOver!!!!\n";
+				show_question = false;
+				fetch_question = false;
 			}
 		}
 		result = result.substr(0, result.length() - A_DELIMITER.length());
@@ -551,7 +596,7 @@ void process_access_room() {
 void process_get_result() {
 	Message message;
 	message.opcode = 7;
-	message.payload = result;
+	message.payload = room.id + M_DELIMITER + result + M_DELIMITER + time_exam;
 	message.length = message.payload.length();
 
 	encodeMessage(message, buff);
@@ -611,7 +656,56 @@ void process_setup_room() {
 			cout << "You are not logged in!!";
 			break;
 		case ERROR_SETUP_ROOM:
+			cout << "Setup room error";
+			break;
+		default:
 			cout << "Error Server";
+		}
+	}
+	cout << "\nPress key to continue!!\n";
+	_getch();
+	system("CLS");
+}
+
+void process_get_result_of_room() {
+	get_info_room(false);
+	Message message;
+	message.opcode = 11;
+	string payload;
+	int index_room;
+
+	cout << "Position room\n";
+	if (info_room.size() <= 0) {
+		cout << "No Rooms Available!!!!!\n";
+		cout << "\nPress key to continue!!\n";
+		_getch();
+		system("CLS");
+		return;
+	}
+	index_room = get_line("Enter room", 1, info_room.size());
+	payload = info_room[index_room - 1].id;
+
+	message.length = payload.size();
+	message.payload = payload;
+
+	encodeMessage(message, buff);
+	// send message to server
+	ret = Send(client, buff, 0);
+
+	// receive message from server
+	ret = Receive(client, buff, 0);
+	message = decodeMessage(buff);
+	if (message.opcode == SUCCESS) {
+		show_info_result(payload, message.payload);
+	}
+	else {
+		switch (stoi(message.payload))
+		{
+		case NO_LOGIN:
+			cout << "You are not logged in!!";
+			break;
+		case ROOM_NO_EXIST:
+			cout << "Room not exist!!";
 			break;
 		default:
 			cout << "Error Server";

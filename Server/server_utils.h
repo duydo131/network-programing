@@ -5,6 +5,7 @@
 #include "fstream"
 #include "string"
 #include "vector"
+#include "map"
 #include "time.h"
 #define BUFF_SIZE 2048 // 2 KB
 using namespace std;
@@ -12,16 +13,21 @@ using namespace std;
 string Q_DELIMITER = "#%#";
 string A_DELIMITER = "$%$";
 string SPACE_DELIMITER = " ";
-string R_DELIMITER = "&%&";
+string R_DELIMITER = "&%&"; 
+string M_DELIMITER = "%$%";
 
 string PRACTICE = "PRACTICE";
 
 int QUESTION_SIZE = 4;
 int QUESTION_SIZE_PRACTICE = 4;
 
+int LENGTH_TIME_PRACTICE = 10;
+
 string ACCOUNTS_PATH = "accounts.txt";
 string QUESTIONS_PATH = "questions.txt";
 string ROOMS_PATH = "rooms.txt";
+string RESULT_PATH = "results.txt";
+
 string FILE_LOG = "log_13.txt";
 
 struct Question {
@@ -76,6 +82,13 @@ struct Account {
 	bool login = false;
 };
 
+struct Result {
+	string user;
+	int right;
+	int wrong;
+	string time;
+};
+
 /*
 * Function to split string by delimiter
 * @returns list of string
@@ -94,6 +107,39 @@ vector<string> split(string s, string del)
 	}
 	substr = s.substr(start, s.length() - start);
 	rs.push_back(substr);
+	return rs;
+}
+
+map<string, vector<Result> > get_result(string result_path) {
+	map<string, vector<Result> > rs;
+	string line;
+	ifstream file(result_path);
+	while (getline(file, line))
+	{
+		Result result;
+		vector<string> data = split(line, SPACE_DELIMITER);
+		string id = data[0];
+		result.user = data[1];
+		result.right = stoi(data[2]);
+		result.wrong = stoi(data[3]);
+		result.time = data[4];
+		if (rs.find(id) != rs.end()) rs[id].push_back(result);
+		else {
+			vector<Result> r;
+			r.push_back(result);
+			rs[id] = r;
+		}
+	}
+	file.close();
+	//return accounts;
+	/*map<string, vector<Result> >::iterator it;
+	for (it = rs.begin(); it != rs.end(); it++) {
+		cout << endl << "room " << it->first << endl;
+		for (Result x : it->second) {
+			cout << "	" << x.user << " " << x.right << " " << x.time << endl;
+		}
+		cout << endl;
+	}*/
 	return rs;
 }
 
