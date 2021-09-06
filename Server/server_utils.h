@@ -1,115 +1,17 @@
 #pragma once
 
 #include "stdio.h"
-#include "iostream"
 #include "fstream"
-#include "string"
 #include "vector"
 #include "map"
-#include "time.h"
-#define BUFF_SIZE 2048 // 2 KB
+
+#include "Constant.h"
+#include "Struct.h"
+#include "utils.h"
+
 using namespace std;
 
-string Q_DELIMITER = "#%#";
-string A_DELIMITER = "$%$";
-string SPACE_DELIMITER = " ";
-string R_DELIMITER = "&%&"; 
-string M_DELIMITER = "%$%";
-
-string PRACTICE = "PRACTICE";
-
-int QUESTION_SIZE = 4;
-int QUESTION_SIZE_PRACTICE = 4;
-
-int LENGTH_TIME_PRACTICE = 10;
-
-string ACCOUNTS_PATH = "accounts.txt";
-string QUESTIONS_PATH = "questions.txt";
-string ROOMS_PATH = "rooms.txt";
-string RESULT_PATH = "results.txt";
-
-string FILE_LOG = "log_13.txt";
-
-struct Question {
-	int id;
-	string question;
-	string options[4];
-	string answer;
-};
-
-struct Room {
-	string id;
-	int number_of_question;
-	vector<Question> questions; //lazy
-	int length_time;
-	string start_time;
-};
-
-enum ResponseCode {
-	SUCCESS = 0,
-	ERROR_CODE = 1,
-
-	ACCOUNT_EXISTED = 201,
-
-	ACCOUNT_LOGGED = 304,
-	INCORRECT_ACCOUNT = 302,
-	ACCOUNT_LOCKED = 303,
-	LOGGED = 301,
-
-	NO_LOGIN = 101,
-	BAD_REQUEST = 102,
-	// Command Error
-	COMMAND_ERROR = 404,
-
-	ROOM_STARTED = 501,
-	ROOM_NO_EXIST = 502,
-
-	ERROR_RESULT = 701,
-
-	ERROR_SETUP_ROOM = 801
-};
-
-struct Message {
-	int opcode;
-	int length;
-	string payload;
-};
-
-struct Account {
-	string username;
-	string password;
-	int status;
-	bool login = false;
-};
-
-struct Result {
-	string user;
-	int right;
-	int wrong;
-	string time;
-};
-
-/*
-* Function to split string by delimiter
-* @returns list of string
-*/
-vector<string> split(string s, string del)
-{
-	vector<string> rs;
-	string substr;
-	int start = 0;
-	int end = s.find(del);
-	while (end != -1) {
-		substr = s.substr(start, end - start);
-		rs.push_back(substr);
-		start = end + del.size();
-		end = s.find(del, start);
-	}
-	substr = s.substr(start, s.length() - start);
-	rs.push_back(substr);
-	return rs;
-}
-
+// get result of room
 map<string, vector<Result> > get_result(string result_path) {
 	map<string, vector<Result> > rs;
 	string line;
@@ -131,19 +33,10 @@ map<string, vector<Result> > get_result(string result_path) {
 		}
 	}
 	file.close();
-	//return accounts;
-	/*map<string, vector<Result> >::iterator it;
-	for (it = rs.begin(); it != rs.end(); it++) {
-		cout << endl << "room " << it->first << endl;
-		for (Result x : it->second) {
-			cout << "	" << x.user << " " << x.right << " " << x.time << endl;
-		}
-		cout << endl;
-	}*/
 	return rs;
 }
 
-/*
+/**
 * Function to get all accounts in database
 * @returns list of account in database
 */
@@ -164,7 +57,7 @@ vector<Account> getAllAccounts(string accounts_path) {
 	return accounts;
 }
 
-/*
+/**
 * Function save new account to database
 */
 void saveAccount(Account account, string accounts_path) {
@@ -181,7 +74,7 @@ void saveAccount(Account account, string accounts_path) {
 	file.close();
 }
 
-/*
+/**
 * Function to get all questions in database
 * @returns list of question in database
 */
@@ -211,7 +104,7 @@ vector<Question> getAllQuestions(string questions_path) {
 	return questions;
 }
 
-/*
+/**
 * Function to get all rooms in database
 * @returns list of room in database
 */
@@ -235,7 +128,7 @@ vector<Room> getAllRooms(string rooms_path) {
 	return rooms;
 }
 
-/*
+/**
 * Function to encode questions
 * @param questions: [IN] List questions for encode
 * @returns output string of encode list question
@@ -260,23 +153,7 @@ string encodeQuestions(vector<Question> questions) {
 	return output;
 }
 
-/*
-* Function convert char array to string
-* @param a: [IN] char array
-* @param size: [IN] size of char array
-* @returns string converted
-*/
-string convertToString(char* a, int size)
-{
-	int i;
-	string s = "";
-	for (i = 0; i < size; i++) {
-		s = s + a[i];
-	}
-	return s;
-}
-
-/*
+/**
 * Function to encode message
 * @param message: [IN] message for encode
 * @param buff: [OUT] encode of message
@@ -291,7 +168,7 @@ void encodeMessage(Message message, char *buff) {
 	memcpy(buff, &str[0], BUFF_SIZE);
 }
 
-/*
+/**
 * Function to decode message
 * @param buff: [IN] data for decode
 * @returns message
@@ -306,6 +183,7 @@ Message decodeMessage(char *buff) {
 	return message;
 }
 
+// decode message for multi message
 vector<Message> decode_messages(char *buff) {
 	string msg = convertToString(buff, strlen(buff));
 	vector<string> data = split(msg, SPACE_DELIMITER);
@@ -324,6 +202,7 @@ vector<Message> decode_messages(char *buff) {
 	return out;
 }
 
+// function encode message for 1 message, addition for function encode message for multi message
 int encode_message(Message message, char *buff) {
 	string str = "";
 	str += to_string(message.opcode);
@@ -337,6 +216,7 @@ int encode_message(Message message, char *buff) {
 	return str.length();
 }
 
+//function encode message for multi message
 void encode_messages(vector<Message> in, char* buff) {
 	int position = 0, add;
 	for (Message message : in) {
@@ -347,42 +227,78 @@ void encode_messages(vector<Message> in, char* buff) {
 	buff[position - 1] = 0;
 }
 
-
-/*	Write File
-input :
-char* filename
-char[] data to write
-*/
-void log(string fileLog, char data[]) {
-	ofstream ofs(fileLog, ofstream::app);
-
-	ofs << data << endl;
+// encode result from Result to string
+string encode_result(Result r) {
+	string payload = "";
+	payload.append(r.user);
+	payload.append(Q_DELIMITER);
+	payload.append(to_string(r.right));
+	payload.append(Q_DELIMITER);
+	payload.append(to_string(r.wrong));
+	payload.append(Q_DELIMITER);
+	payload.append(r.time);
+	payload.append(A_DELIMITER);
+	return payload;
 }
 
-/*	Get pre_log include clientIP and clientPort
-input :
-char[] clientIP
-int clientPort
-output : char* valid form
-*/
-char* get_pre_log(char clientIP[], int socket) {
-	int size = 22;
-	char* pre_log = (char*)malloc(size);
-	sprintf_s(pre_log, size, "%s:%d", clientIP, socket);
-	return pre_log;
+// save result of room to database
+int save_result(string result_path, Result rs, string room_id) {
+	ofstream outfile(result_path, ios::app);
+	if (outfile.fail()) return -1;
+	outfile << endl << room_id << SPACE_DELIMITER
+		<< rs.user << SPACE_DELIMITER
+		<< rs.right << SPACE_DELIMITER
+		<< rs.wrong << SPACE_DELIMITER
+		<< rs.time;
+	outfile.close();
+	return 1;
 }
 
-/*	Change time to valid format
-input : time_t
-output : char* valid form [dd/mm/yyyy hh:mm:ss]
-*/
-char* get_time_request(time_t t) {
-	int size = 22;
-	char* time_request = (char*)malloc(size);
-	tm ltm;
-	localtime_s(&ltm, &t);
-	sprintf_s(time_request, size, "[%02d/%02d/%04d %02d:%02d:%02d]",
-		ltm.tm_mday, ltm.tm_mon + 1, ltm.tm_year + 1900,
-		ltm.tm_hour, ltm.tm_min, ltm.tm_sec);
-	return time_request;
+// decode question
+string decode_question(Question q) {
+	string payload = "";
+	string id = to_string(q.id);
+	string question = q.question;
+	string options;
+	options.append(q.options[0]);
+	options.append(Q_DELIMITER);
+	options.append(q.options[1]);
+	options.append(Q_DELIMITER);
+	options.append(q.options[2]);
+	options.append(Q_DELIMITER);
+	options.append(q.options[3]);
+	payload.append(id);
+	payload.append(Q_DELIMITER);
+	payload.append(question);
+	payload.append(Q_DELIMITER);
+	payload.append(options);
+	payload.append(A_DELIMITER);
+	return payload;
+}
+
+// decode room
+int decode_room(Room &room, string payload) {
+	vector<string> info_room = split(payload, A_DELIMITER);
+	try {
+		room.id = info_room[0];
+		room.number_of_question = stoi(info_room[1]);
+		room.length_time = stoi(info_room[2]);
+		room.start_time = info_room[3];
+		return 1;
+	}
+	catch (exception ex) {
+		return -1;
+	}
+}
+
+// save room to database
+int save_room(string rooms_path, Room room) {
+	ofstream outfile(rooms_path, ios::app);
+	if (outfile.fail()) return -1;
+	outfile << endl << room.id << SPACE_DELIMITER
+		<< room.number_of_question << SPACE_DELIMITER
+		<< room.length_time << SPACE_DELIMITER
+		<< room.start_time;
+	outfile.close();
+	return 1;
 }

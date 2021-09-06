@@ -203,7 +203,7 @@ unsigned __stdcall serverWorkerThread(LPVOID completionPortID)
 			perIoData->dataBuff.buf[transferredBytes] = 0;
 
 			time_t now = time(0);
-			printf("client: %s\n", perIoData->dataBuff.buf);
+			//printf("client: %s\n", perIoData->dataBuff.buf);
 			vector<Message> msgRecvs = decode_messages(perIoData->dataBuff.buf);
 			vector<Message> msgReses;
 			for (Message msgRecv : msgRecvs) {
@@ -212,7 +212,7 @@ unsigned __stdcall serverWorkerThread(LPVOID completionPortID)
 				log_activity(perIoData->session, perIoData->dataBuff.buf, msgRes, FILE_LOG, now);
 			}
 			encode_messages(msgReses, buff);
-			printf("server: %s\n", buff);
+			//printf("server: %s\n", buff);
 			perIoData->dataBuff.buf = buff;
 			perIoData->dataBuff.len = strlen(buff);
 			perIoData->length = strlen(buff);

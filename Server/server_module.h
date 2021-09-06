@@ -2,13 +2,13 @@
 
 #include "stdafx.h"
 #include "stdio.h"
-#include "server_utils.h"
-#include <string>
-#include "fstream"
 #include "ws2tcpip.h"
 #include "winsock2.h"
 #include "list"
-#include <stdlib.h>
+#include "stdlib.h"
+
+#include "server_utils.h"
+
 using namespace std;
 
 struct Session {
@@ -27,28 +27,6 @@ vector<Question> questions = getAllQuestions(QUESTIONS_PATH);
 vector<Room> rooms = getAllRooms(ROOMS_PATH);
 map<string, vector<Result> > results = get_result(RESULT_PATH);
 
-time_t to_time_t(const string& timestamp) // throws on bad timestamp
-{
-	tm tm{};
-	tm.tm_year = stoi(timestamp.substr(0, 4)) - 1900;
-	tm.tm_mon = stoi(timestamp.substr(4, 2)) - 1;
-	tm.tm_mday = stoi(timestamp.substr(6, 2));
-	tm.tm_hour = stoi(timestamp.substr(8, 2));
-	tm.tm_min = stoi(timestamp.substr(10, 2));
-	tm.tm_sec = stoi(timestamp.substr(12, 2));
-
-	return mktime(addressof(tm));
-}
-
-int comparetime(time_t time1, time_t time2) {
-	return difftime(time1, time2) > 0.0 ? 1 : -1;
-}
-
-bool check_status_room(Room room) {
-	time_t current_time = time(0);
-	if (comparetime(to_time_t(room.start_time), current_time) == 1) return true;
-	else return false;
-}
 bool checkAccountExist(string username) {
 	int number_accounts = accounts.size();
 	for (int i = 0; i < number_accounts; i++) {
@@ -59,39 +37,14 @@ bool checkAccountExist(string username) {
 	return false;
 }
 
-// ------------
-string encode_result(Result r) {
-	string payload = "";
-	payload.append(r.user);
-	payload.append(Q_DELIMITER);
-	payload.append(to_string(r.right));
-	payload.append(Q_DELIMITER);
-	payload.append(to_string(r.wrong));
-	payload.append(Q_DELIMITER);
-	payload.append(r.time);
-	payload.append(A_DELIMITER);
-	return payload;
-}
-
-int save_result(string result_path, Result rs, string room_id) {
-	ofstream outfile(result_path, ios::app);
-	if (outfile.fail()) return -1;
-	outfile << endl << room_id << SPACE_DELIMITER
-		<< rs.user << SPACE_DELIMITER
-		<< rs.right << SPACE_DELIMITER
-		<< rs.wrong << SPACE_DELIMITER
-		<< rs.time;
-	outfile.close();
-	return 1;
-}
-
+// log
 void log_activity(Session* session, char* request, Message response, string filename, time_t now) {
 	string res = "";
 	if (response.opcode == SUCCESS) res += to_string(SUCCESS);
 	else res += to_string(ERROR_CODE) + " " + response.payload;
 
 	// define pre_log "ClientIP:ClientPort"
-	char* pre_log = get_pre_log(session->clientIP, session->clientPort);
+	char* pre_log = get_pre_log(session->clientIP, session->s);
 
 	// define pre_log "[dd/mm/yyyy hh:mm:ss]"
 	char* time_request = get_time_request(now);
@@ -106,41 +59,7 @@ void log_activity(Session* session, char* request, Message response, string file
 	free(pre_log);
 }
 
-string decode_question(Question q) {
-	string payload = "";
-	string id = to_string(q.id);
-	string question = q.question;
-	string options;
-	options.append(q.options[0]);
-	options.append(Q_DELIMITER);
-	options.append(q.options[1]);
-	options.append(Q_DELIMITER);
-	options.append(q.options[2]);
-	options.append(Q_DELIMITER);
-	options.append(q.options[3]);
-	payload.append(id);
-	payload.append(Q_DELIMITER);
-	payload.append(question);
-	payload.append(Q_DELIMITER);
-	payload.append(options);
-	payload.append(A_DELIMITER);
-	return payload;
-}
-
-int decode_room(Room &room, string payload) {
-	vector<string> info_room = split(payload, A_DELIMITER);
-	try {
-		room.id = info_room[0];
-		room.number_of_question = stoi(info_room[1]);
-		room.length_time = stoi(info_room[2]);
-		room.start_time = info_room[3];
-		return 1;
-	}
-	catch (exception ex) {
-		return -1;
-	}
-}
-
+// get room for room_id
 int get_room(string id) {
 	for (int i = 0; i < rooms.size(); i++) {
 		if (rooms[i].id == id) return i;
@@ -148,26 +67,7 @@ int get_room(string id) {
 	return -1;
 }
 
-int inline random_index(int max) {
-	return rand() % max;
-}
-
-int random_range(int min, int max) {
-	if (max <= min) return max;
-	return rand() % (max - min) + min;
-}
-
-char* format_client_IP(char* clientIP) {
-	int length = strlen(clientIP);
-	char* out = (char*)malloc(length + 1);
-	for (int i = 0; i < length; i++) {
-		if (*(clientIP + i) == '.') out[i] = random_index(9) + 48;
-		else out[i] = *(clientIP + i);
-	}
-	out[length] = 0;
-	return out;
-}
-
+// generate id for room
 string generate_id(Session* session) {
 	time_t seconds = time(NULL);
 	char id[50];
@@ -177,49 +77,21 @@ string generate_id(Session* session) {
 	return convertToString(id, strlen(id));
 }
 
-vector<int> random_question(int number_of_question) {
-	vector<int> rs;
-	list<int> temp;
-	int length_of_all_question = questions.size();
-	for (int i = 0; i < length_of_all_question; i++) {
-		temp.push_back(i);
-	}
-	int index;
-	list<int>::iterator it;
-	for (int i = 0; i < number_of_question; i++) {
-		index = random_index(temp.size());
-		it = temp.begin();
-		advance(it, index);
-		rs.push_back(*it);
-		temp.erase(it);
-	}
-	return rs;
-}
-
+/**
+* load question for room (lazy : when client request, load_question 1 time)
+*/
 void load_question(Room &room) {
-	vector<int> ramdom_intdex_question = random_question(room.number_of_question);
+	vector<int> ramdom_intdex_question = random_question(room.number_of_question, questions.size());
 	room.questions.clear();
 	for (int i : ramdom_intdex_question) room.questions.push_back(questions[i]);
 }
 
-int save_room(string rooms_path, Room room) {
-	ofstream outfile(rooms_path, ios::app);
-	if (outfile.fail()) return -1;
-	outfile << endl << room.id << SPACE_DELIMITER 
-					<< room.number_of_question << SPACE_DELIMITER 
-					<< room.length_time << SPACE_DELIMITER 
-					<< room.start_time;
-	outfile.close();
-	return 1;
-}
-
-bool validate_result(vector<string> rs) {
-	for (string r : rs) {
-		if (r != "A" && r != "B" && r != "C" && r != "D") return false;
-	}
-	return true;
-}
-
+/**
+* Function for client check answer
+* @param message: message to handle
+* @param session: [IN/OUT] pointer session of client
+* @retruns response message for client
+*/
 Message process_check_result(Message message, Session *session) {
 	Message response;
 	// check login
@@ -297,6 +169,12 @@ Message process_check_result(Message message, Session *session) {
 	return response;
 }
 
+/**
+* Function for client create room
+* @param message: message to handle
+* @param session: [IN/OUT] pointer session of client
+* @retruns response message for client
+*/
 Message process_setup_room(Message message, Session *session) {
 	Message response;
 	if (session->login) {
@@ -332,6 +210,12 @@ Message process_setup_room(Message message, Session *session) {
 	return response;
 }
 
+/**
+* Function for client get result of room
+* @param message: message to handle
+* @param session: [IN/OUT] pointer session of client
+* @retruns response message for client
+*/
 Message process_get_result_of_room(Message message, Session *session) {
 	Message response;
 	if (session->login) {
