@@ -1,2 +1,22 @@
-﻿  Server.vcxproj -> D:\20202\program\network programing\Project\Debug\Server.exe
-  Server.vcxproj -> D:\20202\program\network programing\Project\Debug\Server.pdb (Full PDB)
+﻿Build started 9/7/2021 3:19:27 PM.
+     1>Project "D:\20202\Lap tring mang\Project\final\network-programing\Server\Server.vcxproj" on node 2 (Rebuild target(s)).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Yc"stdafx.h" /Fp"Debug\Server.pch" /Fo"Debug\\" /Fd"Debug\vc140.pdb" /Gd /TP /analyze- /errorReport:prompt stdafx.cpp
+         stdafx.cpp
+         C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Yu"stdafx.h" /Fp"Debug\Server.pch" /Fo"Debug\\" /Fd"Debug\vc140.pdb" /Gd /TP /analyze- /errorReport:prompt Server.cpp
+         Server.cpp
+     1>d:\20202\lap tring mang\project\final\network-programing\server\server_module.h(64): warning C4018: '<': signed/unsigned mismatch
+     1>d:\20202\lap tring mang\project\final\network-programing\server\server_module.h(116): warning C4018: '<': signed/unsigned mismatch
+     1>d:\20202\lap tring mang\project\final\network-programing\server\server_module.h(135): warning C4018: '<': signed/unsigned mismatch
+     1>d:\20202\lap tring mang\project\final\network-programing\server\server_module.h(199): warning C4101: 'ex': unreferenced local variable
+     1>d:\20202\lap tring mang\project\final\network-programing\server\server_module.h(200): warning C4101: 'ex': unreferenced local variable
+     1>d:\20202\lap tring mang\project\final\network-programing\server\server_module.h(410): warning C4018: '<': signed/unsigned mismatch
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"D:\20202\Lap tring mang\Project\final\network-programing\Debug\Server.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /Debug /PDB:"D:\20202\Lap tring mang\Project\final\network-programing\Debug\Server.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\20202\Lap tring mang\Project\final\network-programing\Debug\Server.lib" /MACHINE:X86 Debug\Server.obj
+         Debug\stdafx.obj
+         Server.vcxproj -> D:\20202\Lap tring mang\Project\final\network-programing\Debug\Server.exe
+     1>Done Building Project "D:\20202\Lap tring mang\Project\final\network-programing\Server\Server.vcxproj" (Rebuild target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:04.45

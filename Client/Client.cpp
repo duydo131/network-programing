@@ -521,8 +521,8 @@ void process_access_room() {
 		case NO_LOGIN:
 			cout << "You are not logged in!!";
 			break;
-		case ROOM_STARTED:
-			cout << "Room started!!";
+		case ROOM_NOT_STARTED:
+			cout << "Room not started!!";
 			break;
 		case ROOM_NO_EXIST:
 			cout << "Room not exist!!";

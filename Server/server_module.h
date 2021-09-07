@@ -458,7 +458,7 @@ Message access_room(Message message, Session *session) {
 				response.opcode = SUCCESS;
 			}
 			else {
-				resCode = ROOM_STARTED;
+				resCode = ROOM_NOT_STARTED;
 			}
 		}
 		else {
