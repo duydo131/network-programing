@@ -22,6 +22,9 @@ struct Session {
 	Account* account = nullptr;
 };
 
+// Declare Critical Section
+CRITICAL_SECTION critical;
+
 vector<Account> accounts = getAllAccounts(ACCOUNTS_PATH);
 vector<Question> questions = getAllQuestions(QUESTIONS_PATH);
 vector<Room> rooms = getAllRooms(ROOMS_PATH);
@@ -53,7 +56,9 @@ void log_activity(Session* session, char* request, Message response, string file
 	sprintf_s(log_data, "%s %s $ %s $ %s", pre_log, time_request, request, res.c_str());
 
 	// log 
+	EnterCriticalSection(&critical);
 	log(filename, log_data);
+	LeaveCriticalSection(&critical);
 
 	free(time_request);
 	free(pre_log);
@@ -82,8 +87,10 @@ string generate_id(Session* session) {
 */
 void load_question(Room &room) {
 	vector<int> ramdom_intdex_question = random_question(room.number_of_question, questions.size());
+	EnterCriticalSection(&critical);
 	room.questions.clear();
 	for (int i : ramdom_intdex_question) room.questions.push_back(questions[i]);
+	LeaveCriticalSection(&critical);
 }
 
 /**
@@ -144,6 +151,8 @@ Message process_check_result(Message message, Session *session) {
 			result.right = correct;
 			result.wrong = wrong;
 			result.time = info[2];
+
+			EnterCriticalSection(&critical);
 			save_result(RESULT_PATH, result, room.id);
 			if (results.find(room.id) != results.end()) results[room.id].push_back(result);
 			else {
@@ -151,6 +160,7 @@ Message process_check_result(Message message, Session *session) {
 				r.push_back(result);
 				results[room.id] = r;
 			}
+			LeaveCriticalSection(&critical);
 		}
 		if (response.opcode == SUCCESS) {
 			string res = to_string(correct) + SPACE_DELIMITER + to_string(wrong);
@@ -189,9 +199,13 @@ Message process_setup_room(Message message, Session *session) {
 				room.length_time = length_time;
 				room.start_time = start_time;
 				room.id = generate_id(session);
+
+				EnterCriticalSection(&critical);
 				int res = save_room(ROOMS_PATH, room);
 				if (res < 0) throw 1;
 				rooms.push_back(room);
+
+				LeaveCriticalSection(&critical);
 				response.opcode = SUCCESS;
 				response.length = 0;
 				return response;
@@ -259,8 +273,12 @@ Message registry(Message message) {
 
 	ResponseCode resCode;
 	if (!checkAccountExist(account.username)) {
+
+		EnterCriticalSection(&critical);
 		saveAccount(account, ACCOUNTS_PATH);
 		accounts.push_back(account);
+		LeaveCriticalSection(&critical);
+
 		response.opcode = SUCCESS;
 		response.length = 0;
 	}
@@ -306,7 +324,10 @@ Message login(Message message, Session *session) {
 						resCode = ACCOUNT_LOGGED;
 					}
 					else {
+						EnterCriticalSection(&critical);
 						accounts[i].login = true;
+						LeaveCriticalSection(&critical);
+
 						session->login = true;
 						strcpy_s(session->username, account.username.length() + 1, account.username.c_str());
 						response.opcode = SUCCESS; 
@@ -346,7 +367,11 @@ Message logout(Message message, Session *session) {
 		int number_accounts = accounts.size();
 		for (int i = 0; i < number_accounts; i++) {
 			if (accounts[i].username == convertToString(session->username, strlen(session->username)) && accounts[i].login == true && accounts[i].status == 1) {
+				
+				EnterCriticalSection(&critical);
 				accounts[i].login = false;
+				LeaveCriticalSection(&critical);
+
 				session->login = false;
 				session->username[0] = 0;
 				response.opcode = SUCCESS;
@@ -458,7 +483,7 @@ Message access_room(Message message, Session *session) {
 				response.opcode = SUCCESS;
 			}
 			else {
-				resCode = ROOM_STARTED;
+				resCode = ROOM_NOT_STARTED;
 			}
 		}
 		else {

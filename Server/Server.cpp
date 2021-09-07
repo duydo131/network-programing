@@ -99,6 +99,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	sockaddr_in clientAddr;
 
 	printf("Start Server!!\n");
+	InitializeCriticalSection(&critical);
 
 	while (1) {
 		// Step 5: Accept connections
@@ -156,6 +157,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			}
 		}
 	}
+	DeleteCriticalSection(&critical);
 	_getch();
 	return 0;
 }

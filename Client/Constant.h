@@ -31,7 +31,7 @@ enum ResponseCode {
 	// Command Error
 	COMMAND_ERROR = 404,
 
-	ROOM_STARTED = 501,
+	ROOM_NOT_STARTED = 501,
 	ROOM_NO_EXIST = 502,
 
 	ERROR_RESULT = 701,

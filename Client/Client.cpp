@@ -1,4 +1,4 @@
-// Client.cpp : Defines the entry point for the console application.
+﻿// Client.cpp : Defines the entry point for the console application.
 //
 
 #include "stdafx.h"
@@ -29,16 +29,16 @@ vector<Room> info_room;
 future<void> compute_thread;
 
 // process communication with server
-void process_signup();  // opcode 2
-void process_signin();  // opcode 3
-void process_signout();  // opcode 4
-void process_practice();  // opcode 5
-int process_get_question(int);  // opcode 6
-void process_get_result();  // opcode 7
-void process_setup_room();  // opcode 8
-void process_get_info_room(bool f);  // opcode 9
-void process_access_room();  // opcode 10
-void process_get_result_of_room();  // opcode 11
+void process_signup();  // opcode 2 đ
+void process_signin();  // opcode 3 đ
+void process_signout();  // opcode 4 đ
+void process_practice();  // opcode 5 đ
+int process_get_question(int);  // opcode 6 v
+void process_get_result();  // opcode 7 d
+void process_setup_room();  // opcode 8 d
+void process_get_info_room(bool f);  // opcode 9 v
+void process_access_room();  // opcode 10 v
+void process_get_result_of_room();  // opcode 11 d
 
 // function addition
 void get_question();
@@ -521,8 +521,8 @@ void process_access_room() {
 		case NO_LOGIN:
 			cout << "You are not logged in!!";
 			break;
-		case ROOM_STARTED:
-			cout << "Room started!!";
+		case ROOM_NOT_STARTED:
+			cout << "Room not started!!";
 			break;
 		case ROOM_NO_EXIST:
 			cout << "Room not exist!!";

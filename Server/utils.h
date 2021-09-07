@@ -120,7 +120,7 @@ int comparetime(time_t time1, time_t time2) {
 */
 bool check_status_room(Room room) {
 	time_t current_time = time(0);
-	if (comparetime(to_time_t(room.start_time), current_time) == 1) return true;
+	if (comparetime(to_time_t(room.start_time), current_time) == -1) return true;
 	else return false;
 }
 

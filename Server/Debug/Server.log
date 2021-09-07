@@ -1,2 +1,9 @@
-﻿  Server.vcxproj -> D:\20202\program\network programing\Project\Debug\Server.exe
+﻿  Server.cpp
+d:\20202\program\network programing\project\server\server_module.h(69): warning C4018: '<': signed/unsigned mismatch
+d:\20202\program\network programing\project\server\server_module.h(123): warning C4018: '<': signed/unsigned mismatch
+d:\20202\program\network programing\project\server\server_module.h(142): warning C4018: '<': signed/unsigned mismatch
+d:\20202\program\network programing\project\server\server_module.h(213): warning C4101: 'ex': unreferenced local variable
+d:\20202\program\network programing\project\server\server_module.h(214): warning C4101: 'ex': unreferenced local variable
+d:\20202\program\network programing\project\server\server_module.h(435): warning C4018: '<': signed/unsigned mismatch
+  Server.vcxproj -> D:\20202\program\network programing\Project\Debug\Server.exe
   Server.vcxproj -> D:\20202\program\network programing\Project\Debug\Server.pdb (Full PDB)
